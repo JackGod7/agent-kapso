@@ -8,10 +8,18 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
-      - name: Deploy to Railway
-        uses: railwayapp/railway-github-action@v1
-        with:
-          railway-token: ${{ secrets.RAILWAY_TOKEN }}
-          service: agent-kapso
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli@4.5.4
+
+      - name: Deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway up \
+            --detach \
+            --project b39346b0-8864-4f73-a95e-d14e4c64853e \
+            --environment 3f7d8ae0-5272-4ae6-a7e9-8591fb87f366 \
+            --service 3bf6d212-ff20-4656-a2b7-69c3fb8d4f63 \
+            -m "deploy: ${{ github.sha }}"
