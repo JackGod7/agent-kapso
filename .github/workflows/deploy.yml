@@ -16,10 +16,4 @@ jobs:
       - name: Deploy
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: |
-          railway up \
-            --detach \
-            --project b39346b0-8864-4f73-a95e-d14e4c64853e \
-            --environment 3f7d8ae0-5272-4ae6-a7e9-8591fb87f366 \
-            --service 3bf6d212-ff20-4656-a2b7-69c3fb8d4f63 \
-            -m "deploy: ${{ github.sha }}"
+        run: railway up --detach --service agent-kapso -m "deploy: ${{ github.sha }}"
