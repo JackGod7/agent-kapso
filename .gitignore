@@ -1,0 +1,6 @@
+.env
+node_modules/
+.agents/*/node_modules/
+.agents/*/node_modules
+.claude/
+nul
