@@ -12,4 +12,8 @@ export async function sendText(to, body) {
   return whatsapp.messages.sendText({ phoneNumberId: PHONE_NUMBER_ID, to, body });
 }
 
+export async function sendTyping(to, messageId) {
+  return whatsapp.messages.markRead({ phoneNumberId: PHONE_NUMBER_ID, messageId, typingIndicator: { type: 'text' } });
+}
+
 // ponytail: minimal bootstrap — add webhook handler, templates, flows as needed

@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import crypto from 'crypto';
 import express from 'express';
-import { sendText } from './index.js';
+import { sendText, sendTyping } from './index.js';
 import { runAgent } from './src/agent.js';
 import { getSession, resetSession, setHumanMode, sessions } from './src/state.js';
 
@@ -44,7 +44,7 @@ function verifyChatwootSignature(req) {
 // Debounce buffer: phone → { timer, messages[], contactInfo }
 const pendingMessages = new Map();
 
-async function processMessages(phone, messages, contactInfo) {
+async function processMessages(phone, messages, contactInfo, lastMessageId) {
   const text = messages.join('\n');
   if (!text.trim()) return;
 
@@ -69,6 +69,7 @@ async function processMessages(phone, messages, contactInfo) {
   }
 
   try {
+    if (lastMessageId) await sendTyping(phone, lastMessageId).catch(() => {});
     const reply = await runAgent(phone, text, contactInfo);
     if (reply) await sendText(phone, reply);
   } catch (err) {
@@ -154,15 +155,16 @@ app.post('/webhook', async (req, res) => {
     if (pendingMessages.has(phone)) {
       clearTimeout(pendingMessages.get(phone).timer);
       pendingMessages.get(phone).messages.push(text);
+      pendingMessages.get(phone).lastMessageId = msg.id;
     } else {
-      pendingMessages.set(phone, { messages: [text], contactInfo });
+      pendingMessages.set(phone, { messages: [text], contactInfo, lastMessageId: msg.id });
     }
 
     const pending = pendingMessages.get(phone);
     pending.timer = setTimeout(async () => {
-      const { messages, contactInfo } = pendingMessages.get(phone);
+      const { messages, contactInfo, lastMessageId } = pendingMessages.get(phone);
       pendingMessages.delete(phone);
-      await processMessages(phone, messages, contactInfo);
+      await processMessages(phone, messages, contactInfo, lastMessageId);
     }, DEBOUNCE_MS);
   }
 });
