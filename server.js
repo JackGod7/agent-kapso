@@ -31,6 +31,16 @@ function verifySignature(req) {
   return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
 }
 
+const CHATWOOT_WEBHOOK_SECRET = process.env.CHATWOOT_WEBHOOK_SECRET;
+
+function verifyChatwootSignature(req) {
+  if (!CHATWOOT_WEBHOOK_SECRET) return true; // skip if not configured
+  const sig = req.headers['x-chatwoot-hmac-sha256'];
+  if (!sig) return false;
+  const expected = crypto.createHmac('sha256', CHATWOOT_WEBHOOK_SECRET).update(req.rawBody).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+}
+
 // Debounce buffer: phone → { timer, messages[], contactInfo }
 const pendingMessages = new Map();
 
@@ -79,6 +89,7 @@ app.get('/health', (_req, res) => res.json({
 
 // Chatwoot → WhatsApp: human agent replies + takeover/resolve
 app.post('/chatwoot-webhook', async (req, res) => {
+  if (!verifyChatwootSignature(req)) return res.sendStatus(401);
   res.sendStatus(200);
 
   const { event, message_type, content, private: isPrivate, sender, meta } = req.body;
