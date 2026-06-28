@@ -17,10 +17,14 @@ export async function runAgent(phone, userText, contactInfo) {
 
   session.history.push({ role: 'user', content: userText });
 
-  // Send Claude only the last HISTORY_WINDOW messages, starting on a user turn
+  // Send Claude only the last HISTORY_WINDOW messages, starting on a plain-text user turn
+  // Skip tool_result-only user messages at the boundary — they'd be orphaned without their tool_use
   let trimmed = session.history.slice(-HISTORY_WINDOW);
-  const firstUser = trimmed.findIndex(m => m.role === 'user');
-  if (firstUser > 0) trimmed = trimmed.slice(firstUser);
+  const firstTextUser = trimmed.findIndex(m =>
+    m.role === 'user' &&
+    (typeof m.content === 'string' || (Array.isArray(m.content) && m.content.some(b => b.type !== 'tool_result')))
+  );
+  if (firstTextUser > 0) trimmed = trimmed.slice(firstTextUser);
   const messages = trimmed;
 
   // Agent loop — handles tool use until end_turn
