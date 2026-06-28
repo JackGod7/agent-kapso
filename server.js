@@ -49,7 +49,7 @@ async function processMessages(phone, messages, contactInfo, lastMessageId) {
   const text = messages.join('\n');
   if (!text.trim()) return;
 
-  const session = getSession(phone);
+  const session = await getSession(phone);
 
   if (session.humanMode) {
     console.log(`[human-mode] ${phone}: bot silenced, human agent active`);
@@ -59,7 +59,7 @@ async function processMessages(phone, messages, contactInfo, lastMessageId) {
   if (session.completed) {
     const elapsed = session.completedAt ? Date.now() - session.completedAt : 0;
     if (elapsed > RESET_AFTER_MS) {
-      resetSession(phone);
+      await resetSession(phone);
       console.log(`[reset] ${phone}: session expired after 24h`);
       // fall through — process as new conversation
     } else {
@@ -110,7 +110,7 @@ app.post('/chatwoot-webhook', async (req, res) => {
     // Only forward: outgoing messages from human agents (not bot/api posts)
     if ((message_type === 'outgoing' || message_type === 1) && !isPrivate && sender?.type === 'user') {
       console.log(`[chatwoot→wa] ${phone}: human reply forwarded`);
-      setHumanMode(phone, true); // takeover implicit on first human reply
+      await setHumanMode(phone, true); // takeover implicit on first human reply
       try {
         await sendText(phone, content);
       } catch (err) {
@@ -123,10 +123,10 @@ app.post('/chatwoot-webhook', async (req, res) => {
   if (event === 'conversation_status_changed') {
     const status = req.body.status || req.body.conversation?.status;
     if (status === 'resolved') {
-      setHumanMode(phone, false);
+      await setHumanMode(phone, false);
       console.log(`[chatwoot] ${phone}: conversation resolved, bot resumed`);
     } else if (status === 'open' && sender?.type === 'user') {
-      setHumanMode(phone, true);
+      await setHumanMode(phone, true);
       console.log(`[chatwoot] ${phone}: human takeover`);
     }
   }

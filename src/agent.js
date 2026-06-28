@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { SYSTEM_PROMPT, TOOLS } from './system-prompt.js';
-import { getSession } from './state.js';
+import { getSession, saveSession } from './state.js';
 import { upsertContact, createConversation, postMessage } from './chatwoot.js';
 import { sendText, sendDocument } from '../index.js';
 
@@ -8,7 +8,7 @@ const anthropic = new Anthropic();
 const HISTORY_WINDOW = 20;
 
 export async function runAgent(phone, userText, contactInfo) {
-  const session = getSession(phone);
+  const session = await getSession(phone);
   const startTime = Date.now();
   const toolsUsed = [];
   let totalInputTokens = 0;
@@ -86,11 +86,12 @@ export async function runAgent(phone, userText, contactInfo) {
     console.log(JSON.stringify({ type: 'cost_alert', phone_suffix: phone.slice(-4), tokens: session.totalTokens }));
   }
 
+  await saveSession(phone, session);
   return reply;
 }
 
 async function executeTool(name, input, phone, contactInfo) {
-  const session = getSession(phone);
+  const session = await getSession(phone);
 
   switch (name) {
     case 'get_whatsapp_context':
