@@ -1,6 +1,6 @@
 // ponytail: in-memory — add Redis when running multiple instances
 
-const sessions = new Map();
+export const sessions = new Map();
 
 export function getSession(phone) {
   if (!sessions.has(phone)) {
@@ -11,6 +11,7 @@ export function getSession(phone) {
       waiting: false,
       completed: false,
       completedAt: null,
+      humanMode: false,
     });
   }
   return sessions.get(phone);
@@ -18,4 +19,8 @@ export function getSession(phone) {
 
 export function resetSession(phone) {
   sessions.delete(phone);
+}
+
+export function setHumanMode(phone, value) {
+  getSession(phone).humanMode = value;
 }

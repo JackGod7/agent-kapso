@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import express from 'express';
 import { sendText } from './index.js';
 import { runAgent } from './src/agent.js';
-import { getSession, resetSession } from './src/state.js';
+import { getSession, resetSession, setHumanMode, sessions } from './src/state.js';
 
 const app = express();
 
@@ -17,6 +17,11 @@ const WEBHOOK_SECRET = process.env.KAPSO_WEBHOOK_SECRET;
 const PROCESSABLE_TYPES = ['text'];
 const DEBOUNCE_MS = 4000;
 const RESET_AFTER_MS = 24 * 60 * 60 * 1000;
+
+// Sensor S4: webhook error rate
+let webhookTotal = 0;
+let webhookErrors = 0;
+let completedSessions = 0;
 
 function verifySignature(req) {
   if (!WEBHOOK_SECRET) return true; // skip if not configured
@@ -35,6 +40,11 @@ async function processMessages(phone, messages, contactInfo) {
 
   const session = getSession(phone);
 
+  if (session.humanMode) {
+    console.log(`[human-mode] ${phone}: bot silenced, human agent active`);
+    return;
+  }
+
   if (session.completed) {
     const elapsed = session.completedAt ? Date.now() - session.completedAt : 0;
     if (elapsed > RESET_AFTER_MS) {
@@ -43,6 +53,7 @@ async function processMessages(phone, messages, contactInfo) {
       // fall through — process as new conversation
     } else {
       console.log(`[silent] ${phone}: session completed, ignoring`);
+      completedSessions++;
       return;
     }
   }
@@ -52,10 +63,56 @@ async function processMessages(phone, messages, contactInfo) {
     if (reply) await sendText(phone, reply);
   } catch (err) {
     console.error(`[agent] ${phone}:`, err.message);
+    webhookErrors++;
   }
 }
 
-app.get('/health', (_req, res) => res.json({ ok: true }));
+// Sensor S3: health + metrics
+app.get('/health', (_req, res) => res.json({
+  ok: true,
+  activeSessions: sessions.size,
+  completedSessions,
+  uptimeSeconds: Math.floor(process.uptime()),
+  webhookTotal,
+  webhookErrors,
+}));
+
+// Chatwoot → WhatsApp: human agent replies + takeover/resolve
+app.post('/chatwoot-webhook', async (req, res) => {
+  res.sendStatus(200);
+
+  const { event, message_type, content, private: isPrivate, sender, meta } = req.body;
+
+  // Extract WhatsApp phone from conversation sender
+  const rawPhone = meta?.sender?.phone_number || req.body.conversation?.meta?.sender?.phone_number || '';
+  const phone = rawPhone.replace(/^\+/, ''); // normalize: strip leading +
+  if (!phone) return;
+
+  if (event === 'message_created') {
+    // Only forward: outgoing messages from human agents (not bot/api posts)
+    if ((message_type === 'outgoing' || message_type === 1) && !isPrivate && sender?.type === 'user') {
+      console.log(`[chatwoot→wa] ${phone}: human reply forwarded`);
+      setHumanMode(phone, true); // takeover implicit on first human reply
+      try {
+        await sendText(phone, content);
+      } catch (err) {
+        console.error(`[chatwoot→wa] ${phone}:`, err.message);
+      }
+    }
+    return;
+  }
+
+  if (event === 'conversation_status_changed') {
+    const status = req.body.status || req.body.conversation?.status;
+    if (status === 'resolved') {
+      setHumanMode(phone, false);
+      console.log(`[chatwoot] ${phone}: conversation resolved, bot resumed`);
+    } else if (status === 'open' && sender?.type === 'user') {
+      setHumanMode(phone, true);
+      console.log(`[chatwoot] ${phone}: human takeover`);
+    }
+  }
+});
 
 app.post('/webhook', async (req, res) => {
   if (!verifySignature(req)) {
@@ -64,6 +121,7 @@ app.post('/webhook', async (req, res) => {
 
   // Acknowledge within 10s window — Kapso retries on non-200
   res.sendStatus(200);
+  webhookTotal++;
 
   const eventType = req.headers['x-webhook-event'];
   if (eventType !== 'whatsapp.message.received') return;
