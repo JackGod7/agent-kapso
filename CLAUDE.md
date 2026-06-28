@@ -54,7 +54,7 @@ WhatsApp msg → Kapso → POST /webhook → server.js
 
 - Todo el código es ESModules (`"type": "module"` en package.json)
 - Sin TypeScript — JS plano
-- `src/state.js` exporta `getSession(phone)` — actualmente sync, migrar a async cuando llegue Redis
+- `src/state.js` exporta `getSession(phone)` — async, usa Redis/Valkey en prod (ioredis)
 - Tools de Claude: nunca añadir sin spec en openspec/changes/
 
 ## Specs activos

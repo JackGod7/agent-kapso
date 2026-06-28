@@ -31,7 +31,7 @@
 
 ## Railway Migration
 
-- [ ] Mover servicio `agent-kapso` al proyecto `neuracode-agent` en Railway (donde vive Chatwoot)
+- [x] Mover servicio `agent-kapso` al proyecto `neuracode-agent` en Railway (donde vive Chatwoot)
   - Simplifica vars compartidas (CHATWOOT_BASE_URL interna)
   - Requiere actualizar RAILWAY_TOKEN en GitHub Secrets si cambia proyecto
 
