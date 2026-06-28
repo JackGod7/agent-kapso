@@ -6,6 +6,14 @@
       "headers": {
         "Authorization": "Bearer ${KAPSO_API_KEY}"
       }
+    },
+    "chatwoot": {
+      "command": "npx",
+      "args": ["-y", "chatwoot-mcp-server"],
+      "env": {
+        "CHATWOOT_BASE_URL": "${CHATWOOT_BASE_URL}",
+        "CHATWOOT_API_TOKEN": "${CHATWOOT_API_TOKEN}"
+      }
     }
   }
 }
