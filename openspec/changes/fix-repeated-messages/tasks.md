@@ -17,4 +17,4 @@
 
 ## Deploy
 
-- [ ] Redeploy en Railway tras v2
+- [x] Redeploy en Railway tras v2

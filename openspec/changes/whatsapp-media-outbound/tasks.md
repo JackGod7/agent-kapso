@@ -22,7 +22,7 @@
 
 - [ ] Prospecto dice "dame el temario" → bot envía PDF del temario
 - [ ] Prospecto dice "tienes testimonios?" → bot envía imagen de testimonios
-- [ ] URL inválida → bot responde con texto fallback en vez de crashear
+- [x] URL inválida → bot responde con texto fallback en vez de crashear
 
 ## Deploy
 

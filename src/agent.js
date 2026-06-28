@@ -157,8 +157,13 @@ async function executeTool(name, input, phone, contactInfo) {
       };
       const m = MATERIALS[input.type];
       if (!m) return `unknown_material: ${input.type}`;
-      await sendDocument(phone, m.url, m.filename, m.caption);
-      return 'material_sent';
+      try {
+        await sendDocument(phone, m.url, m.filename, m.caption);
+        return 'material_sent';
+      } catch (err) {
+        console.error(`[send_material] ${phone}: ${err.message}`);
+        return 'material_send_failed — responde al prospecto con texto describiendo el material';
+      }
     }
 
     case 'complete_task':
