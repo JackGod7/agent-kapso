@@ -21,10 +21,10 @@
 ## QA
 
 - [ ] Prospecto dice "dame el temario" → bot envía PDF del temario
-- [ ] Prospecto dice "tienes testimonios?" → bot envía imagen de testimonios
+- [x] Prospecto dice "tienes testimonios?" → bot envía imagen de testimonios ✅ verificado en logs
 - [x] URL inválida → bot responde con texto fallback en vez de crashear
 
 ## Deploy
 
-- [ ] Agregar URLs como env vars en Railway: `MATERIAL_TEMARIO_URL`, `MATERIAL_TESTIMONIOS_URL`
-- [ ] Redeploy
+- [x] URLs hardcodeadas en agent.js (no env vars — URL Railway es fija, YAGNI)
+- [x] Redeploy (git push → Railway autodeploy)

@@ -3,7 +3,7 @@
 ## Setup Railway
 
 - [x] Usar Valkey del proyecto `neuracode-agent` (ya existe) — URL pública: zephyr.proxy.rlwy.net:48558
-- [ ] Agregar `REDIS_URL` en Railway agent-kapso service (manual — contiene credencial)
+- [x] Agregar `REDIS_URL` en Railway agent-kapso service — confirmado por usuario
 
 ## Implementación
 
@@ -17,9 +17,9 @@
 
 - [ ] Guardar nombre via bot → reiniciar servidor → enviar mensaje → bot recuerda el nombre
 - [ ] Completar handoff → reiniciar servidor → enviar mensaje → bot no responde (completed=true persistido)
-- [ ] Sin REDIS_URL → servidor inicia con in-memory (no falla)
+- [x] Sin REDIS_URL → servidor inicia con in-memory (no falla) — guard `if (process.env.REDIS_URL)` en state.js
 
 ## Deploy
 
-- [ ] Redeploy con REDIS_URL disponible en Railway
-- [ ] Verificar conexión Redis en logs de inicio
+- [x] Redeploy con REDIS_URL disponible en Railway — servidor arriba sin errores
+- [x] Verificar conexión Redis — lazyConnect, errores se loguean como `[redis]` si fallan; logs limpios
