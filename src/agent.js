@@ -9,6 +9,11 @@ const HISTORY_WINDOW = 20;
 
 export async function runAgent(phone, userText, contactInfo) {
   const session = getSession(phone);
+  const startTime = Date.now();
+  const toolsUsed = [];
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let reply = null;
 
   session.history.push({ role: 'user', content: userText });
 
@@ -19,7 +24,13 @@ export async function runAgent(phone, userText, contactInfo) {
   const messages = trimmed;
 
   // Agent loop — handles tool use until end_turn
+  const MAX_TOOL_ROUNDS = 10;
+  let rounds = 0;
   while (true) {
+    if (++rounds > MAX_TOOL_ROUNDS) {
+      console.error(`[agent] ${phone}: max tool rounds (${MAX_TOOL_ROUNDS}) exceeded — breaking`);
+      break;
+    }
     const response = await anthropic.messages.create({
       model: 'claude-opus-4-8',
       max_tokens: 1024,
@@ -28,17 +39,21 @@ export async function runAgent(phone, userText, contactInfo) {
       messages,
     });
 
+    // Sensor 1+2: accumulate tokens per round
+    totalInputTokens += response.usage?.input_tokens || 0;
+    totalOutputTokens += response.usage?.output_tokens || 0;
+
     messages.push({ role: 'assistant', content: response.content });
     session.history.push({ role: 'assistant', content: response.content });
 
     if (response.stop_reason === 'end_turn') {
-      return response.content
-        .filter(b => b.type === 'text')
-        .map(b => b.text)
-        .join('') || null;
+      reply = response.content.filter(b => b.type === 'text').map(b => b.text).join('') || null;
+      break;
     }
 
     if (response.stop_reason !== 'tool_use') break;
+
+    response.content.filter(b => b.type === 'tool_use').forEach(b => toolsUsed.push(b.name));
 
     const toolResults = await Promise.all(
       response.content
@@ -54,7 +69,24 @@ export async function runAgent(phone, userText, contactInfo) {
     session.history.push({ role: 'user', content: toolResults });
   }
 
-  return null;
+  // Sensor 1: agent_trace
+  console.log(JSON.stringify({
+    type: 'agent_trace',
+    phone_suffix: phone.slice(-4),
+    rounds,
+    tools_called: toolsUsed,
+    input_tokens: totalInputTokens,
+    output_tokens: totalOutputTokens,
+    duration_ms: Date.now() - startTime,
+  }));
+
+  // Sensor 2: cost tracking per session (~$0.003/1K tokens Sonnet)
+  session.totalTokens = (session.totalTokens || 0) + totalInputTokens + totalOutputTokens;
+  if (session.totalTokens > 50_000) {
+    console.log(JSON.stringify({ type: 'cost_alert', phone_suffix: phone.slice(-4), tokens: session.totalTokens }));
+  }
+
+  return reply;
 }
 
 async function executeTool(name, input, phone, contactInfo) {
