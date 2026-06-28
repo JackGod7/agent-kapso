@@ -46,8 +46,8 @@ sessions[phone] = {
 
 | Variable | Valor |
 |----------|-------|
-| `KAPSO_API_KEY` | `REDACTED_KAPSO_API_KEY` |
-| `KAPSO_PHONE_NUMBER_ID` | `REDACTED_PHONE_NUMBER_ID` |
-| `ANTHROPIC_API_KEY` | `REDACTED_ANTHROPIC_KEY` |
+| `KAPSO_API_KEY` | `<redacted>` |
+| `KAPSO_PHONE_NUMBER_ID` | `<redacted>` |
+| `ANTHROPIC_API_KEY` | `<redacted>` |
 | `KAPSO_WEBHOOK_SECRET` | generado al crear webhook en Kapso |
 | `PORT` | Railway lo inyecta |
