@@ -3,8 +3,8 @@
 ## Prerequisito (Jack)
 
 - [x] Preparar `temario-gh600.pdf` — committeado en repo, servido en GET /temario
-- [ ] Preparar imagen de testimonios
-- [ ] Subir imagen a URL pública cuando esté lista
+- [x] Preparar imagen de testimonios — testimonio-gh600.jpg (Atlantic City case, 52KB)
+- [x] Servida en GET /testimonios desde Railway
 
 ## Investigación (antes de codear)
 
@@ -13,7 +13,7 @@
 ## Implementación
 
 - [x] `index.js`: agregar `sendDocument(to, link, filename, caption)`
-- [ ] `index.js`: agregar `sendImage(to, url, caption)` — pendiente hasta tener imagen
+- [x] `index.js`: agregar `sendImage(to, url, caption)`
 - [x] `src/system-prompt.js`: agregar tool `send_material(type)` — type: "temario"
 - [x] `src/agent.js`: agregar case `send_material` → sendDocument con URL de Railway
 - [x] `server.js`: GET /temario sirve el PDF directamente
