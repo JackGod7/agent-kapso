@@ -49,3 +49,22 @@ export async function setHumanMode(phone, value) {
   session.humanMode = value;
   await saveSession(phone, session);
 }
+
+export async function getAllSessions() {
+  const all = new Map(sessions); // start with in-memory
+  if (redis) {
+    try {
+      const keys = await redis.keys('s:*');
+      if (keys.length) {
+        const vals = await redis.mget(keys);
+        vals.forEach((v, i) => {
+          if (v) {
+            const phone = keys[i].slice(2);
+            if (!all.has(phone)) all.set(phone, JSON.parse(v));
+          }
+        });
+      }
+    } catch (_) {}
+  }
+  return [...all.values()];
+}

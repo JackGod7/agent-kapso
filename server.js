@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import express from 'express';
 import { sendText, sendTyping } from './index.js';
 import { runAgent } from './src/agent.js';
-import { getSession, resetSession, setHumanMode, sessions } from './src/state.js';
+import { getSession, resetSession, setHumanMode, sessions, getAllSessions } from './src/state.js';
 
 const app = express();
 
@@ -84,6 +84,20 @@ async function processMessages(phone, messages, contactInfo, lastMessageId) {
 
 app.get('/temario', (_req, res) => res.sendFile(resolve('temario-gh600.pdf')));
 app.get('/testimonios', (_req, res) => res.sendFile(resolve('testimonio-gh600.jpg')));
+
+// Funnel stats — reads all sessions from Redis + in-memory
+app.get('/stats', async (_req, res) => {
+  const all = await getAllSessions();
+  const byFase = {};
+  let completed = 0, humanMode = 0;
+  for (const s of all) {
+    const fase = s.variables?.fase || 'sin_fase';
+    byFase[fase] = (byFase[fase] || 0) + 1;
+    if (s.completed) completed++;
+    if (s.humanMode) humanMode++;
+  }
+  res.json({ total: all.length, byFase, completed, humanMode, webhookTotal, webhookErrors });
+});
 
 // Sensor S3: health + metrics
 app.get('/health', (_req, res) => res.json({

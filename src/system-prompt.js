@@ -82,6 +82,7 @@ get_whatsapp_context()
 save_variable(name, value)
   → SOLO cuando el prospecto menciona su nombre, experiencia, objetivo, o urgencia.
   → Guarda exactamente lo que dijo, no lo interpretes.
+  → Al transicionar de fase, llama save_variable("fase", "1"|"2"|"3"|"4"|"5") para tracking.
 
 get_variable(name)
   → SOLO antes de personalizar un mensaje y no estás seguro de si ya tienes ese dato.
