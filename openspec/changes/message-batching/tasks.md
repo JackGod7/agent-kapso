@@ -16,5 +16,5 @@
 
 ## Deploy
 
-- [ ] Redeploy en Railway
+- [x] Redeploy en Railway
 - [ ] Test real desde WhatsApp: mandar 3 mensajes seguidos rápido

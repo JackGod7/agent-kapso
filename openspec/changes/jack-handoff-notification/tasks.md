@@ -2,7 +2,7 @@
 
 ## Setup
 
-- [ ] Agregar `JACK_PHONE_NUMBER=51982859073` en Railway vars
+- [x] Agregar `JACK_PHONE_NUMBER=51982859073` en Railway vars
 - [ ] Agregar `JACK_PHONE_NUMBER=51982859073` en `.env` local
 
 ## Implementación
@@ -19,4 +19,4 @@
 
 ## Deploy
 
-- [ ] Redeploy en Railway con la nueva env var
+- [x] Redeploy en Railway con la nueva env var

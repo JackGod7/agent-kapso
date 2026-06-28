@@ -21,5 +21,5 @@
 
 ## Deploy
 
-- [ ] Redeploy en Railway
+- [x] Redeploy en Railway
 - [ ] Test real: trigger complete_task, mandar mensaje, verificar silencio

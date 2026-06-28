@@ -14,5 +14,5 @@
 
 ## Deploy
 
-- [ ] Redeploy en Railway
+- [x] Redeploy en Railway
 - [ ] Verificar logs: sin errores de "unsupported message"

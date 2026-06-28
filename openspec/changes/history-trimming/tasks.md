@@ -13,5 +13,5 @@
 
 ## Deploy
 
-- [ ] Redeploy en Railway
+- [x] Redeploy en Railway
 - [ ] Monitorear logs Railway — sin errores de Anthropic API sobre contexto inválido
