@@ -3,7 +3,7 @@
 ## Artifact Cleanup
 - [x] Revertir `graph.db.zst` de git tracking (`git rm --cached`)
 - [x] Añadir `.codebase-memory/` a `.gitignore`
-- [ ] Commit y push del `.gitignore` actualizado
+- [x] Commit y push del `.gitignore` actualizado
 
 ## Branch Protection
 - [ ] Habilitar branch protection en GitHub: `main` requiere PR + CI pass + no force push
