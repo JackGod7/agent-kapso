@@ -83,6 +83,7 @@ async function processMessages(phone, messages, contactInfo, lastMessageId) {
 }
 
 app.get('/temario', (_req, res) => res.sendFile(resolve('temario-gh600.pdf')));
+app.get('/testimonios', (_req, res) => res.sendFile(resolve('testimonio-gh600.jpg')));
 
 // Sensor S3: health + metrics
 app.get('/health', (_req, res) => res.json({

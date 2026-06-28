@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { SYSTEM_PROMPT, TOOLS } from './system-prompt.js';
 import { getSession, saveSession } from './state.js';
 import { upsertContact, createConversation, postMessage } from './chatwoot.js';
-import { sendText, sendDocument } from '../index.js';
+import { sendText, sendDocument, sendImage } from '../index.js';
 
 const anthropic = new Anthropic();
 const HISTORY_WINDOW = 20;
@@ -153,13 +153,16 @@ async function executeTool(name, input, phone, contactInfo) {
     }
 
     case 'send_material': {
+      const BASE = 'https://agent-kapso-production.up.railway.app';
       const MATERIALS = {
-        temario: { url: 'https://agent-kapso-production.up.railway.app/temario', filename: 'Temario GH-600.pdf', caption: 'Temario oficial — Agentic AI Developer GH-600' },
+        temario: { type: 'doc', url: `${BASE}/temario`, filename: 'Temario GH-600.pdf', caption: 'Temario oficial — Agentic AI Developer GH-600' },
+        testimonios: { type: 'img', url: `${BASE}/testimonios`, caption: 'Resultado real de un alumno — Gobierno de IA para Atlantic City 🚀' },
       };
       const m = MATERIALS[input.type];
       if (!m) return `unknown_material: ${input.type}`;
       try {
-        await sendDocument(phone, m.url, m.filename, m.caption);
+        if (m.type === 'doc') await sendDocument(phone, m.url, m.filename, m.caption);
+        else await sendImage(phone, m.url, m.caption);
         return 'material_sent';
       } catch (err) {
         console.error(`[send_material] ${phone}: ${err.message}`);

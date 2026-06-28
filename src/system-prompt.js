@@ -88,9 +88,9 @@ handoff_to_human(reason)
   → El reason debe ser específico: "Prospecto pregunta precio", "Listo para inscribirse", "Pide hablar con Jack".
 
 send_material(type)
-  → SOLO cuando el prospecto pide el temario, programa, contenidos, o "¿qué incluye?".
-  → type: "temario"
-  → Después de enviarlo, continúa la conversación normalmente con una pregunta de seguimiento.
+  → type "temario": cuando pide el temario, programa, contenidos, o "¿qué incluye?".
+  → type "testimonios": cuando pide pruebas, resultados, casos de éxito, testimonios, o "¿funciona?".
+  → Después de enviarlo, continúa con una pregunta de seguimiento.
 
 complete_task()
   → SOLO cuando: rechazo definitivo confirmado / handoff completado.
@@ -182,7 +182,7 @@ export const TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        type: { type: 'string', enum: ['temario'], description: 'Tipo de material: "temario"' },
+        type: { type: 'string', enum: ['temario', 'testimonios'], description: '"temario" o "testimonios"' },
       },
       required: ['type'],
     },
