@@ -2,24 +2,21 @@
 
 ## Prerequisito (Jack)
 
-- [ ] Preparar `temario-gh600.pdf` — temario oficial del bootcamp
+- [x] Preparar `temario-gh600.pdf` — committeado en repo, servido en GET /temario
 - [ ] Preparar imagen de testimonios
-- [ ] Subir a URL pública (Google Drive público, Notion, o S3) y guardar URLs
+- [ ] Subir imagen a URL pública cuando esté lista
 
 ## Investigación (antes de codear)
 
-- [ ] Verificar que `@kapso/whatsapp-cloud-api` tiene método para enviar documentos/imágenes
-- [ ] Si no: probar directamente `POST /media` + `POST /messages` con type=document via Kapso API
-- [ ] Documentar el método exacto en design.md
+- [x] `@kapso/whatsapp-cloud-api` tiene `messages.sendDocument({ document: { link, filename, caption } })`
 
 ## Implementación
 
-- [ ] `index.js`: agregar `sendDocument(to, url, filename, caption)` 
-- [ ] `index.js`: agregar `sendImage(to, url, caption)`
-- [ ] `src/system-prompt.js`: agregar tool `send_material(type)` con types: "temario", "testimonios", "brochure"
-- [ ] `src/agent.js`: agregar case `send_material` → switch por type → llamar `sendDocument` o `sendImage`
-- [ ] `src/system-prompt.js` SYSTEM_PROMPT: instrucción de cuándo usar `send_material` (cuando prospecto pide temario o evidencia)
-- [ ] `src/agent.js`: hardcodear URLs en el case o en una constante de configuración
+- [x] `index.js`: agregar `sendDocument(to, link, filename, caption)`
+- [ ] `index.js`: agregar `sendImage(to, url, caption)` — pendiente hasta tener imagen
+- [x] `src/system-prompt.js`: agregar tool `send_material(type)` — type: "temario"
+- [x] `src/agent.js`: agregar case `send_material` → sendDocument con URL de Railway
+- [x] `server.js`: GET /temario sirve el PDF directamente
 
 ## QA
 
