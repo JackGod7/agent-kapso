@@ -71,7 +71,10 @@ async function processMessages(phone, messages, contactInfo, lastMessageId) {
   try {
     if (lastMessageId) await sendTyping(phone, lastMessageId).catch(() => {});
     const reply = await runAgent(phone, text, contactInfo);
-    if (reply) await sendText(phone, reply);
+    if (reply && reply.trim() !== session.lastReply?.trim()) {
+      session.lastReply = reply;
+      await sendText(phone, reply);
+    }
   } catch (err) {
     console.error(`[agent] ${phone}:`, err.message);
     webhookErrors++;

@@ -12,6 +12,7 @@ export function getSession(phone) {
       completed: false,
       completedAt: null,
       humanMode: false,
+      lastReply: null,
     });
   }
   return sessions.get(phone);
