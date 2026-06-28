@@ -2,14 +2,13 @@
 
 ## Investigación (antes de codear)
 
-- [ ] Revisar `node_modules/@kapso/whatsapp-cloud-api/dist/` — ¿hay método para typing/status?
-- [ ] Si no existe: ver si Kapso API expone endpoint directo para typing indicator
-- [ ] Documentar el endpoint exacto en design.md
+- [x] Revisar `node_modules/@kapso/whatsapp-cloud-api/dist/` — `messages.markRead` con `typingIndicator: { type: 'text' }`
+- [x] Documentar el endpoint exacto en design.md
 
 ## Implementación
 
-- [ ] `index.js`: agregar función `sendTyping(to)` que llama el endpoint correcto
-- [ ] `server.js`: llamar `sendTyping(phone)` ANTES de `runAgent()` (en `processMessages`)
+- [x] `index.js`: agregar función `sendTyping(to, messageId)` — `whatsapp.messages.markRead` + typingIndicator
+- [x] `server.js`: llamar `sendTyping(phone, lastMessageId)` ANTES de `runAgent()` (en `processMessages`)
 
 ## QA
 
@@ -17,4 +16,4 @@
 
 ## Deploy
 
-- [ ] Redeploy en Railway
+- [x] Redeploy en Railway (git push → autodeploy)
