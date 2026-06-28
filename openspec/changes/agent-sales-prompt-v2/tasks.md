@@ -34,6 +34,6 @@
 
 ## Deploy
 
-- [ ] `railway up` → redeploy con nuevo system-prompt.js
-- [ ] Verificar logs Railway — sin errores de tools desconocidos
-- [ ] Run checklist de regresión completo (specs/qa-flows.md)
+- [x] `railway up` → redeploy con nuevo system-prompt.js
+- [x] Verificar logs Railway — sin errores de tools desconocidos
+~~- [ ] Run checklist de regresión completo (specs/qa-flows.md)~~ ← duplicado, tracking en QA arriba
