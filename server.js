@@ -101,6 +101,8 @@ app.get('/stats', async (_req, res) => {
   res.json({ total: all.length, byFase, bySource, completed, humanMode, webhookTotal, webhookErrors });
 });
 
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
 app.get('/dashboard', async (_req, res) => {
   const all = await getAllSessions();
   const byFase = {}, bySource = {};
@@ -114,7 +116,7 @@ app.get('/dashboard', async (_req, res) => {
     if (s.humanMode) humanMode++;
   }
   const bar = (label, val, max, color) =>
-    `<div style="margin:6px 0"><span style="display:inline-block;width:140px;font-size:13px">${label}</span><span style="display:inline-block;background:${color};width:${max ? Math.round((val/max)*200) : 0}px;height:16px;border-radius:3px;vertical-align:middle"></span> <b>${val}</b></div>`;
+    `<div style="margin:6px 0"><span style="display:inline-block;width:140px;font-size:13px">${esc(label)}</span><span style="display:inline-block;background:${esc(color)};width:${max ? Math.round((val/max)*200) : 0}px;height:16px;border-radius:3px;vertical-align:middle"></span> <b>${val}</b></div>`;
   const maxFase = Math.max(1, ...Object.values(byFase));
   const maxSrc  = Math.max(1, ...Object.values(bySource));
   res.send(`<!DOCTYPE html><html><head><meta charset=utf-8><title>Kapso Funnel — GH600</title>
@@ -219,7 +221,8 @@ app.post('/webhook', async (req, res) => {
       if (referral) {
         console.log(JSON.stringify({ type: 'referral', phone_suffix: phone.slice(-4), referral }));
         const stype = referral.source_type || '';
-        session.source = stype === 'ad' ? (referral.source_url?.includes('instagram') ? 'instagram_ad' : 'facebook_ad') : stype || 'meta_referral';
+        const KNOWN = { ad: referral.source_url?.includes('instagram') ? 'instagram_ad' : 'facebook_ad' };
+        session.source = KNOWN[stype] || 'meta_referral';
       } else {
         const lower = text.toLowerCase();
         if (lower.startsWith('tiktok')) session.source = 'tiktok';
