@@ -2,15 +2,21 @@ import Anthropic from '@anthropic-ai/sdk';
 import { SYSTEM_PROMPT, TOOLS } from './system-prompt.js';
 import { getSession } from './state.js';
 import { upsertContact, createConversation, postMessage } from './chatwoot.js';
+import { sendText } from '../index.js';
 
 const anthropic = new Anthropic();
+const HISTORY_WINDOW = 20;
 
 export async function runAgent(phone, userText, contactInfo) {
   const session = getSession(phone);
 
   session.history.push({ role: 'user', content: userText });
 
-  const messages = [...session.history];
+  // Send Claude only the last HISTORY_WINDOW messages, starting on a user turn
+  let trimmed = session.history.slice(-HISTORY_WINDOW);
+  const firstUser = trimmed.findIndex(m => m.role === 'user');
+  if (firstUser > 0) trimmed = trimmed.slice(firstUser);
+  const messages = trimmed;
 
   // Agent loop — handles tool use until end_turn
   while (true) {
@@ -68,9 +74,34 @@ async function executeTool(name, input, phone, contactInfo) {
       session.variables[input.name] = input.value;
       return 'ok';
 
-    case 'handoff_to_human':
+    case 'handoff_to_human': {
       session.completed = true;
+      session.completedAt = Date.now();
       console.log(`[HANDOFF] ${phone}: ${input.reason}`);
+
+      const jackPhone = process.env.JACK_PHONE_NUMBER;
+      if (jackPhone) {
+        const name = session.variables['nombre'] || session.variables['name'] || contactInfo?.contact_name || phone;
+        const vars = Object.entries(session.variables)
+          .map(([k, v]) => `  ${k}: ${v}`)
+          .join('\n') || '  (sin datos guardados)';
+        const notification = [
+          `🔔 Lead listo para hablar:`,
+          ``,
+          `Nombre: ${name}`,
+          `Número: wa.me/${phone}`,
+          `Razón: ${input.reason}`,
+          ``,
+          `Datos del prospecto:`,
+          vars,
+        ].join('\n');
+        try {
+          await sendText(jackPhone, notification);
+        } catch (err) {
+          console.warn(`[HANDOFF] notify Jack failed: ${err.message}`);
+        }
+      }
+
       try {
         const name = session.variables['nombre'] || session.variables['name'] || phone;
         const contactId = await upsertContact(phone, name);
@@ -84,10 +115,13 @@ async function executeTool(name, input, phone, contactInfo) {
       } catch (err) {
         console.error(`[CHATWOOT] handoff failed: ${err.message}`);
       }
+
       return 'handoff_initiated';
+    }
 
     case 'complete_task':
       session.completed = true;
+      session.completedAt = Date.now();
       return 'completed';
 
     default:

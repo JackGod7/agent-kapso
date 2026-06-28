@@ -2,14 +2,14 @@
 
 ## Setup
 
-- [ ] Agregar `JACK_PHONE_NUMBER=51971388435` en Railway vars
-- [ ] Agregar `JACK_PHONE_NUMBER=51971388435` en `.env` local
+- [ ] Agregar `JACK_PHONE_NUMBER=51982859073` en Railway vars
+- [ ] Agregar `JACK_PHONE_NUMBER=51982859073` en `.env` local
 
 ## Implementación
 
-- [ ] `src/agent.js`: agregar `import { sendText } from '../index.js'`
-- [ ] `src/agent.js` case `handoff_to_human`: leer `session.variables`, construir mensaje, llamar `sendText(jackPhone, notification)`
-- [ ] Wrappear `sendText` en try/catch — si falla no debe romper el handoff
+- [x] `src/agent.js`: agregar `import { sendText } from '../index.js'`
+- [x] `src/agent.js` case `handoff_to_human`: leer `session.variables`, construir mensaje, llamar `sendText(jackPhone, notification)`
+- [x] Wrappear `sendText` en try/catch — si falla no debe romper el handoff
 
 ## QA
 

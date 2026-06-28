@@ -2,10 +2,10 @@
 
 ## Implementación
 
-- [ ] `src/state.js`: agregar `completedAt: null` a session default
-- [ ] `src/agent.js` case `handoff_to_human`: setear `session.completedAt = Date.now()`
-- [ ] `src/agent.js` case `complete_task`: setear `session.completedAt = Date.now()`
-- [ ] `server.js` (en processMessages): check `session.completed` con lógica de reset a 24h
+- [x] `src/state.js`: agregar `completedAt: null` a session default
+- [x] `src/agent.js` case `handoff_to_human`: setear `session.completedAt = Date.now()`
+- [x] `src/agent.js` case `complete_task`: setear `session.completedAt = Date.now()`
+- [x] `server.js` (en processMessages): check `session.completed` con lógica de reset a 24h
 - [ ] Si Redis: `saveSession` después de setear `completedAt`
 
 ## Dependencias

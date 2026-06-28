@@ -2,8 +2,8 @@
 
 ## Implementación
 
-- [ ] `server.js`: reemplazar `msg.type !== 'text'` por `!PROCESSABLE_TYPES.includes(msg.type)`
-- [ ] `server.js`: importar `getSession` y agregar check `session.completed` antes de `runAgent()`
+- [x] `server.js`: reemplazar `msg.type !== 'text'` por `!PROCESSABLE_TYPES.includes(msg.type)`
+- [x] `server.js`: importar `getSession` y agregar check `session.completed` antes de `runAgent()`
 
 ## QA
 

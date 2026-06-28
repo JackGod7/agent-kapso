@@ -10,7 +10,12 @@ export function getSession(phone) {
       history: [],
       waiting: false,
       completed: false,
+      completedAt: null,
     });
   }
   return sessions.get(phone);
+}
+
+export function resetSession(phone) {
+  sessions.delete(phone);
 }

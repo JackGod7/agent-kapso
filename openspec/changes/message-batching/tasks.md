@@ -2,10 +2,10 @@
 
 ## Implementación
 
-- [ ] `server.js`: agregar Map `pendingMessages` con debounce de 4000ms
-- [ ] `server.js`: refactorizar loop de eventos para usar el buffer
-- [ ] `server.js`: extraer `processMessages(phone, messages[], contactInfo)` como función
-- [ ] `server.js`: concatenar mensajes acumulados con `\n` antes de pasar a `runAgent`
+- [x] `server.js`: agregar Map `pendingMessages` con debounce de 4000ms
+- [x] `server.js`: refactorizar loop de eventos para usar el buffer
+- [x] `server.js`: extraer `processMessages(phone, messages[], contactInfo)` como función
+- [x] `server.js`: concatenar mensajes acumulados con `\n` antes de pasar a `runAgent`
 
 ## QA
 

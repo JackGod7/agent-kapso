@@ -2,8 +2,8 @@
 
 ## Implementación
 
-- [ ] `src/agent.js`: reemplazar `const messages = [...session.history]` con slice de últimos 20 + fix de tool pair integrity
-- [ ] Agregar constante `HISTORY_WINDOW = 20` al inicio del archivo
+- [x] `src/agent.js`: reemplazar `const messages = [...session.history]` con slice de últimos 20 + fix de tool pair integrity
+- [x] Agregar constante `HISTORY_WINDOW = 20` al inicio del archivo
 
 ## QA
 

@@ -17,19 +17,21 @@
 
 ## Código
 
-- [ ] Crear `src/chatwoot.js`:
-  - `upsertContact(phone, name)` → contact_id
-  - `upsertConversation(contact_id, phone)` → conversation_id
-  - `postMessage(conversation_id, content, type)` type: incoming|outgoing
-- [ ] Modificar `src/state.js`: agregar `humanMode: false` a session inicial
-- [ ] Modificar `src/agent.js`: verificar `session.humanMode` antes de llamar Claude
-- [ ] Modificar `server.js`:
-  - En `/webhook`: llamar chatwoot.js para sincronizar mensaje + conversación
-  - Nuevo endpoint `POST /chatwoot-webhook`: manejar takeover y replies humanos
+- [x] Crear `src/chatwoot.js`: upsertContact, createConversation, postMessage
+- [x] Modificar `src/agent.js`: handoff_to_human → llama Chatwoot API con historial
+- [ ] Modificar `src/state.js`: agregar `humanMode: false` (YAGNI — pendiente si se necesita takeover)
+- [ ] Modificar `server.js`: nuevo endpoint `POST /chatwoot-webhook` para takeover/replies humanos
+
+## Vars Railway (agent-kapso production)
+
+- [x] CHATWOOT_BASE_URL = https://chatwoot-production-76f4.up.railway.app
+- [x] CHATWOOT_API_TOKEN = (seteado)
+- [x] CHATWOOT_ACCOUNT_ID = 1
+- [x] CHATWOOT_INBOX_ID = 2 (inbox "WhatsApp Kapso - GH600")
 
 ## Test
 
-- [ ] Enviar mensaje → verificar que aparece en Chatwoot
-- [ ] Bot responde → verificar respuesta visible en Chatwoot
-- [ ] Agente humano responde en Chatwoot → llega a WhatsApp + bot se silencia
+- [x] handoff_to_human → conversación creada en Chatwoot con historial ✅
+- [x] Jack ve conversación en Chatwoot con historial completo ✅
+- [ ] Agente humano responde en Chatwoot → llega a WhatsApp (requiere /chatwoot-webhook)
 - [ ] Conversación resuelta en Chatwoot → bot retoma
