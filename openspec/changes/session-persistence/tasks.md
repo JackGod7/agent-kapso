@@ -2,17 +2,16 @@
 
 ## Setup Railway
 
-- [ ] Crear servicio Redis en Railway (proyecto agent-kapso)
-- [ ] Verificar que `REDIS_URL` queda disponible como var en el servicio
+- [x] Usar Valkey del proyecto `neuracode-agent` (ya existe) — URL pública: zephyr.proxy.rlwy.net:48558
+- [ ] Agregar `REDIS_URL` en Railway agent-kapso service (manual — contiene credencial)
 
 ## Implementación
 
-- [ ] `npm install ioredis`
-- [ ] `src/state.js`: reescribir con Redis client + fallback in-memory si no hay REDIS_URL
-- [ ] `src/state.js`: exportar `saveSession(phone, session)` además de `getSession`
-- [ ] `src/agent.js`: todos los `getSession()` → `await getSession()`
-- [ ] `src/agent.js`: agregar `await saveSession(phone, session)` después de mutaciones (history push, variables, completed)
-- [ ] `server.js`: `getSession()` para check completed → `await getSession()`
+- [x] `npm install ioredis`
+- [x] `src/state.js`: reescribir con ioredis + fallback in-memory si no hay REDIS_URL
+- [x] `src/state.js`: exportar `saveSession(phone, session)`, async getSession/resetSession/setHumanMode
+- [x] `src/agent.js`: todos los `getSession()` → `await getSession()`, `saveSession` al final
+- [x] `server.js`: getSession/resetSession/setHumanMode → await
 
 ## QA
 
