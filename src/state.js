@@ -14,6 +14,7 @@ function defaultSession() {
     phase: 'nuevo', variables: {}, history: [],
     waiting: false, completed: false, completedAt: null,
     humanMode: false, lastReply: null, totalTokens: 0,
+    source: 'organic', createdAt: Date.now(),
   };
 }
 

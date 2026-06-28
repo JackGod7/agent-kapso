@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import express from 'express';
 import { sendText, sendTyping } from './index.js';
 import { runAgent } from './src/agent.js';
-import { getSession, resetSession, setHumanMode, sessions, getAllSessions } from './src/state.js';
+import { getSession, saveSession, resetSession, setHumanMode, sessions, getAllSessions } from './src/state.js';
 
 const app = express();
 
@@ -88,15 +88,53 @@ app.get('/testimonios', (_req, res) => res.sendFile(resolve('testimonio-gh600.jp
 // Funnel stats — reads all sessions from Redis + in-memory
 app.get('/stats', async (_req, res) => {
   const all = await getAllSessions();
-  const byFase = {};
+  const byFase = {}, bySource = {};
   let completed = 0, humanMode = 0;
   for (const s of all) {
     const fase = s.variables?.fase || 'sin_fase';
     byFase[fase] = (byFase[fase] || 0) + 1;
+    const src = s.source || 'organic';
+    bySource[src] = (bySource[src] || 0) + 1;
     if (s.completed) completed++;
     if (s.humanMode) humanMode++;
   }
-  res.json({ total: all.length, byFase, completed, humanMode, webhookTotal, webhookErrors });
+  res.json({ total: all.length, byFase, bySource, completed, humanMode, webhookTotal, webhookErrors });
+});
+
+app.get('/dashboard', async (_req, res) => {
+  const all = await getAllSessions();
+  const byFase = {}, bySource = {};
+  let completed = 0, humanMode = 0;
+  for (const s of all) {
+    const fase = s.variables?.fase || 'sin_fase';
+    byFase[fase] = (byFase[fase] || 0) + 1;
+    const src = s.source || 'organic';
+    bySource[src] = (bySource[src] || 0) + 1;
+    if (s.completed) completed++;
+    if (s.humanMode) humanMode++;
+  }
+  const bar = (label, val, max, color) =>
+    `<div style="margin:6px 0"><span style="display:inline-block;width:140px;font-size:13px">${label}</span><span style="display:inline-block;background:${color};width:${max ? Math.round((val/max)*200) : 0}px;height:16px;border-radius:3px;vertical-align:middle"></span> <b>${val}</b></div>`;
+  const maxFase = Math.max(1, ...Object.values(byFase));
+  const maxSrc  = Math.max(1, ...Object.values(bySource));
+  res.send(`<!DOCTYPE html><html><head><meta charset=utf-8><title>Kapso Funnel — GH600</title>
+<style>body{font-family:sans-serif;padding:32px;background:#0f0f0f;color:#eee}h2{color:#a78bfa}h3{color:#7dd3fc;margin-top:24px}.card{background:#1a1a1a;border-radius:10px;padding:20px;margin-bottom:20px;border:1px solid #333}.row{display:flex;gap:20px}.stat{flex:1;text-align:center}.stat b{font-size:32px;color:#a78bfa}.stat small{display:block;color:#888;font-size:12px}</style>
+</head><body>
+<h2>🤖 Funnel GH-600 — Agent Kapso</h2>
+<div class=row>
+  <div class=card><div class=stat><b>${all.length}</b><small>Total prospectos</small></div></div>
+  <div class=card><div class=stat><b>${humanMode}</b><small>Con Jack ahora</small></div></div>
+  <div class=card><div class=stat><b>${completed}</b><small>Completados</small></div></div>
+  <div class=card><div class=stat><b>${webhookErrors}</b><small>Errores webhook</small></div></div>
+</div>
+<div class=card><h3>Fase del funnel</h3>
+${Object.entries(byFase).sort().map(([k,v]) => bar(k, v, maxFase, '#a78bfa')).join('')}
+</div>
+<div class=card><h3>Fuente de tráfico</h3>
+${Object.entries(bySource).sort().map(([k,v]) => bar(k, v, maxSrc, '#34d399')).join('')}
+</div>
+<p style="color:#555;font-size:12px">Actualiza la página para refrescar · <a href=/stats style=color:#555>/stats JSON</a> · <a href=/health style=color:#555>/health</a></p>
+</body></html>`);
 });
 
 // Sensor S3: health + metrics
@@ -173,6 +211,24 @@ app.post('/webhook', async (req, res) => {
     const contactInfo = { contact_name: event.conversation?.kapso?.contact_name };
 
     if (!phone || !text.trim()) continue;
+
+    // Source attribution: referral (Meta ads) or magic-word prefix in opening text
+    if (event.is_new_conversation) {
+      const session = await getSession(phone);
+      const referral = msg.referral; // Kapso may or may not forward this from Meta
+      if (referral) {
+        console.log(JSON.stringify({ type: 'referral', phone_suffix: phone.slice(-4), referral }));
+        const stype = referral.source_type || '';
+        session.source = stype === 'ad' ? (referral.source_url?.includes('instagram') ? 'instagram_ad' : 'facebook_ad') : stype || 'meta_referral';
+      } else {
+        const lower = text.toLowerCase();
+        if (lower.startsWith('tiktok')) session.source = 'tiktok';
+        else if (lower.startsWith('fb-') || lower.startsWith('facebook')) session.source = 'facebook_ad';
+        else if (lower.startsWith('ig-') || lower.startsWith('instagram')) session.source = 'instagram_ad';
+        // else stays 'organic'
+      }
+      await saveSession(phone, session);
+    }
 
     // Debounce: accumulate rapid messages per phone
     if (pendingMessages.has(phone)) {
