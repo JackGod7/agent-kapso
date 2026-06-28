@@ -2,9 +2,9 @@
 
 ## Implementación
 
-- [ ] `src/state.js`: agregar `lastReply: null` a session inicial
-- [ ] `server.js`: comparar `reply.trim()` con `session.lastReply?.trim()` antes de `sendText`
-- [ ] `server.js`: si diferente → actualizar `session.lastReply` y enviar
+- [x] `src/state.js`: agregar `lastReply: null` a session inicial
+- [x] `server.js`: comparar `reply.trim()` con `session.lastReply?.trim()` antes de `sendText`
+- [x] `server.js`: si diferente → actualizar `session.lastReply` y enviar
 
 ## Dependencia
 
