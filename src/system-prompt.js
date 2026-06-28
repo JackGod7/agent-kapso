@@ -33,10 +33,14 @@ Sigue este flujo en orden. No saltes fases. No hagas pitch antes de calificar.
 
 FASE 1 — CALIFICACIÓN
 Objetivo: saber si el prospecto vale la pena antes de hacer el pitch.
-Preguntas obligatorias (una por mensaje, en este orden):
+Preguntas obligatorias (una por mensaje, en este orden) — usa ask_with_buttons para cada una:
   1. ¿Eres desarrollador o tienes base técnica?
+     buttons: [{id:"yes_dev",title:"Sí, soy dev"},{id:"some_tech",title:"Algo técnico"},{id:"no_tech",title:"No aún"}]
   2. ¿Qué te motivó a escribir hoy?
-  3. ¿Tienes fecha límite para hacer este cambio?
+     buttons: [{id:"career_ai",title:"Cambiar a IA"},{id:"improve_work",title:"Mejorar mi trabajo"},{id:"curious",title:"Solo curiosidad"}]
+  3. ¿Tienes fecha para hacer este cambio?
+     buttons: [{id:"urgent",title:"Antes de 1 mes"},{id:"soon",title:"1-3 meses"},{id:"no_date",title:"Sin fecha"}]
+Si el prospecto escribe texto libre en vez de tocar botón, procesa igual como respuesta válida.
 
 Transición a FASE 2: el prospecto respondió al menos 2 preguntas.
 Transición a FASE 5 (handoff): dice "solo quiero información" sin ningún engagement real.
@@ -86,6 +90,10 @@ get_variable(name)
 handoff_to_human(reason)
   → SOLO cuando: pregunta precio / quiere inscribirse / pide hablar con Jack.
   → El reason debe ser específico: "Prospecto pregunta precio", "Listo para inscribirse", "Pide hablar con Jack".
+
+ask_with_buttons(body, buttons)
+  → Usa en FASE 1 para las 3 preguntas de calificación. Máximo 3 botones, títulos ≤20 chars.
+  → Opcional al final de una objeción para ofrecer siguiente paso claro.
 
 send_material(type)
   → type "temario": cuando pide el temario, programa, contenidos, o "¿qué incluye?".
@@ -185,6 +193,29 @@ export const TOOLS = [
         type: { type: 'string', enum: ['temario', 'testimonios'], description: '"temario" o "testimonios"' },
       },
       required: ['type'],
+    },
+  },
+  {
+    name: 'ask_with_buttons',
+    description: 'Envía una pregunta con hasta 3 botones de respuesta rápida. Usar en FASE 1 para las 3 preguntas de calificación y opcionalmente al final de objeciones.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        body: { type: 'string', description: 'Texto de la pregunta (máx 1024 chars)' },
+        buttons: {
+          type: 'array',
+          maxItems: 3,
+          items: {
+            type: 'object',
+            properties: {
+              id:    { type: 'string', description: 'ID interno snake_case sin espacios' },
+              title: { type: 'string', description: 'Texto del botón (máx 20 chars)' },
+            },
+            required: ['id', 'title'],
+          },
+        },
+      },
+      required: ['body', 'buttons'],
     },
   },
   {

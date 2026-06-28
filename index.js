@@ -24,4 +24,8 @@ export async function sendImage(to, link, caption) {
   return whatsapp.messages.sendImage({ phoneNumberId: PHONE_NUMBER_ID, to, image: { link, caption } });
 }
 
+export async function sendButtons(to, bodyText, buttons) {
+  return whatsapp.messages.sendInteractiveButtons({ phoneNumberId: PHONE_NUMBER_ID, to, bodyText, buttons });
+}
+
 // ponytail: minimal bootstrap — add webhook handler, templates, flows as needed

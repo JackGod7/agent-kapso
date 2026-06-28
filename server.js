@@ -15,7 +15,7 @@ app.use(express.json({
 
 const PORT = process.env.PORT || 3000;
 const WEBHOOK_SECRET = process.env.KAPSO_WEBHOOK_SECRET;
-const PROCESSABLE_TYPES = ['text'];
+const PROCESSABLE_TYPES = ['text', 'interactive'];
 const DEBOUNCE_MS = 4000;
 const RESET_AFTER_MS = 24 * 60 * 60 * 1000;
 
@@ -153,7 +153,9 @@ app.post('/webhook', async (req, res) => {
     if (!msg || !PROCESSABLE_TYPES.includes(msg.type)) continue;
 
     const phone = event.conversation?.phone_number;
-    const text = msg.text?.body || msg.kapso?.content || '';
+    const text = msg.type === 'interactive'
+      ? (msg.interactive?.button_reply?.title || '')
+      : (msg.text?.body || msg.kapso?.content || '');
     const contactInfo = { contact_name: event.conversation?.kapso?.contact_name };
 
     if (!phone || !text.trim()) continue;

@@ -8,20 +8,20 @@
 ## Implementación
 
 ### index.js
-- [ ] Agregar `sendButtons(to, bodyText, buttons)` — `whatsapp.messages.sendInteractiveButtons`
-- [ ] Export en la misma línea que `sendText`, `sendDocument`, etc.
+- [x] Agregar `sendButtons(to, bodyText, buttons)` — `whatsapp.messages.sendInteractiveButtons`
+- [x] Export en la misma línea que `sendText`, `sendDocument`, etc.
 
 ### server.js
-- [ ] Agregar `'interactive'` a `PROCESSABLE_TYPES`
-- [ ] Extraer texto según tipo: `msg.type === 'interactive' ? msg.interactive?.button_reply?.title : msg.text?.body || msg.kapso?.content`
+- [x] Agregar `'interactive'` a `PROCESSABLE_TYPES`
+- [x] Extraer texto según tipo: `msg.type === 'interactive' ? msg.interactive?.button_reply?.title : msg.text?.body || msg.kapso?.content`
 
 ### src/system-prompt.js
-- [ ] Agregar tool `ask_with_buttons` al array TOOLS (ver design.md para schema completo)
-- [ ] Actualizar instrucción FASE 1: "Usa ask_with_buttons para las 3 preguntas de calificación"
+- [x] Agregar tool `ask_with_buttons` al array TOOLS (ver design.md para schema completo)
+- [x] Actualizar instrucción FASE 1: "Usa ask_with_buttons para las 3 preguntas de calificación"
 
 ### src/agent.js
-- [ ] Agregar `sendButtons` al import de `../index.js`
-- [ ] Agregar case `ask_with_buttons` en `executeTool`
+- [x] Agregar `sendButtons` al import de `../index.js`
+- [x] Agregar case `ask_with_buttons` en `executeTool`
 
 ## QA
 - [ ] Bot envía pregunta 1 de calificación con 3 botones → visible en WhatsApp
