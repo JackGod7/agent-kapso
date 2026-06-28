@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import crypto from 'crypto';
+import { resolve } from 'path';
 import express from 'express';
 import { sendText, sendTyping } from './index.js';
 import { runAgent } from './src/agent.js';
@@ -80,6 +81,8 @@ async function processMessages(phone, messages, contactInfo, lastMessageId) {
     webhookErrors++;
   }
 }
+
+app.get('/temario', (_req, res) => res.sendFile(resolve('temario-gh600.pdf')));
 
 // Sensor S3: health + metrics
 app.get('/health', (_req, res) => res.json({

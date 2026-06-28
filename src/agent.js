@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { SYSTEM_PROMPT, TOOLS } from './system-prompt.js';
 import { getSession } from './state.js';
 import { upsertContact, createConversation, postMessage } from './chatwoot.js';
-import { sendText } from '../index.js';
+import { sendText, sendDocument } from '../index.js';
 
 const anthropic = new Anthropic();
 const HISTORY_WINDOW = 20;
@@ -149,6 +149,16 @@ async function executeTool(name, input, phone, contactInfo) {
       }
 
       return 'handoff_initiated';
+    }
+
+    case 'send_material': {
+      const MATERIALS = {
+        temario: { url: 'https://agent-kapso-production.up.railway.app/temario', filename: 'Temario GH-600.pdf', caption: 'Temario oficial — Agentic AI Developer GH-600' },
+      };
+      const m = MATERIALS[input.type];
+      if (!m) return `unknown_material: ${input.type}`;
+      await sendDocument(phone, m.url, m.filename, m.caption);
+      return 'material_sent';
     }
 
     case 'complete_task':

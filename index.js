@@ -16,4 +16,8 @@ export async function sendTyping(to, messageId) {
   return whatsapp.messages.markRead({ phoneNumberId: PHONE_NUMBER_ID, messageId, typingIndicator: { type: 'text' } });
 }
 
+export async function sendDocument(to, link, filename, caption) {
+  return whatsapp.messages.sendDocument({ phoneNumberId: PHONE_NUMBER_ID, to, document: { link, filename, caption } });
+}
+
 // ponytail: minimal bootstrap — add webhook handler, templates, flows as needed
