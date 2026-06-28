@@ -7,9 +7,8 @@
   - Settings → Inboxes → New Inbox → API
   - Nombre: "WhatsApp Kapso - GH600"
   - `inbox_id` = 2
-- [ ] Crear webhook en Chatwoot apuntando a `https://agent-kapso-production.up.railway.app/chatwoot-webhook`
+- [x] Crear webhook en Chatwoot apuntando a `https://agent-kapso-production.up.railway.app/chatwoot-webhook`
   - Eventos: `message_created`, `conversation_status_changed`
-  - ⚠️ Manual: hacer en Chatwoot admin → Settings → Integrations → Webhooks
 - [x] Agregar vars en Railway:
   - `CHATWOOT_BASE_URL` ✅
   - `CHATWOOT_API_TOKEN` ✅
