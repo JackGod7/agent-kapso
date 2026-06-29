@@ -4,7 +4,8 @@ import { resolve } from 'path';
 import express from 'express';
 import { sendText, sendTyping } from './index.js';
 import { transcribeAudio } from './src/transcribe.js';
-import { runAgent, archiveToChatwoot } from './src/agent.js';
+import { runAgent } from './src/agent.js';
+import { chatwootForward, archiveToChatwoot } from './src/chatwoot.js';
 import { getSession, saveSession, resetSession, setHumanMode, sessions, getAllSessions } from './src/state.js';
 
 const app = express();
@@ -82,9 +83,19 @@ async function processMessages(phone, messages, contactInfo, lastMessageId) {
     }
 
     if (lastMessageId) await sendTyping(phone, lastMessageId).catch(() => {});
+
+    // T7: forward incoming BEFORE runAgent
+    await chatwootForward(phone, session, text, 'incoming', contactInfo);
+    // T8: persist chatwootConversationId to Redis before runAgent
+    //     (if process dies during runAgent, ID is already in Redis)
+    await saveSession(phone, session);
+
     const prevReply = session.lastReply;
     const reply = await runAgent(phone, text, contactInfo);
+
     if (reply && reply.trim() !== prevReply?.trim()) {
+      // T9: forward outgoing BEFORE sendText (guarantees order in Chatwoot)
+      await chatwootForward(phone, session, reply, 'outgoing', contactInfo);
       await sendText(phone, reply);
     }
   } catch (err) {

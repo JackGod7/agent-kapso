@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { SYSTEM_PROMPT, TOOLS } from './system-prompt.js';
 import { getSession, saveSession } from './state.js';
-import { upsertContact, createConversation, postMessage } from './chatwoot.js';
+import { archiveToChatwoot, chatwootForward } from './chatwoot.js';
 import { sendText, sendDocument, sendImage, sendButtons, saveContactNote } from '../index.js';
 
 const anthropic = new Anthropic();
@@ -176,6 +176,8 @@ async function executeTool(name, input, phone, contactInfo) {
     case 'ask_with_buttons': {
       const { body, buttons } = input;
       await sendButtons(phone, body, buttons);
+      // forward button body so Jack sees what the bot asked in Chatwoot
+      await chatwootForward(phone, session, body, 'outgoing', contactInfo).catch(() => {});
       return 'buttons_sent';
     }
 
@@ -189,27 +191,4 @@ async function executeTool(name, input, phone, contactInfo) {
     default:
       return `unknown_tool: ${name}`;
   }
-}
-
-export async function archiveToChatwoot(phone, session, label, contactInfo) {
-  try {
-    const name = session.variables['nombre'] || session.variables['name'] || contactInfo?.contact_name || phone;
-    const contactId = await upsertContact(phone, name);
-    if (!contactId) throw new Error('upsertContact returned undefined');
-    const conversationId = await createConversation(contactId);
-    const messages = session.history
-      .map(msg => ({ text: extractText(msg.content), dir: msg.role === 'user' ? 'incoming' : 'outgoing' }))
-      .filter(m => m.text);
-    await Promise.all(messages.map(m => postMessage(conversationId, m.text, m.dir)));
-    console.log(`[CHATWOOT] ${phone} → conversation ${conversationId} (${label})`);
-  } catch (err) {
-    console.error(`[CHATWOOT] archive failed (${label}): ${err.message}`);
-  }
-}
-
-function extractText(content) {
-  if (typeof content === 'string') return content;
-  if (Array.isArray(content))
-    return content.filter(b => b.type === 'text').map(b => b.text).join(' ').trim();
-  return '';
 }

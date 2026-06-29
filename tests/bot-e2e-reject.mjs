@@ -112,13 +112,16 @@ console.log('\nVerifying Chatwoot...');
 const conv = await getLatestChatwootConversation();
 if (conv) {
   const msgs = conv.messages?.length ?? conv.meta?.all_count ?? '?';
-  console.log(`✓ Chatwoot conversation ${conv.id} found (${msgs} messages)`);
+  console.log(`✓ Chatwoot conversation ${conv.id}: status=${conv.status} (${msgs} messages)`);
   assert.ok(conv.id, 'conversation id must exist');
+  assert.equal(conv.status, 'resolved',
+    `conversation must be resolved after complete_task, got: '${conv.status}'`);
+  console.log(`✓ Chatwoot conversation ${conv.id}: status=resolved ✓`);
 } else {
   console.warn('⚠ Could not verify Chatwoot (CHATWOOT_* env vars may not be set)');
 }
 
 console.log('\nPASS (webhooks accepted) — verify manually:');
 console.log('  1. WhatsApp: bot replied then closed with short farewell');
-console.log('  2. Railway logs: [CHATWOOT] and "Conversación completada" present');
-console.log(`  3. Chatwoot inbox ${CHATWOOT_INBOX}: conversation with ${PHONE} created`);
+console.log('  2. Railway logs: chatwoot_conv_updated with status=resolved');
+console.log(`  3. Chatwoot inbox ${CHATWOOT_INBOX}: conversation with ${PHONE} status=resolved`);
