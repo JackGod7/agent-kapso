@@ -19,7 +19,8 @@ export async function upsertContact(phone, name) {
     c.phone_number === phone || c.phone_number === `+${phone}`
   );
   if (existing) return existing.id;
-  const contact = await req('/contacts', 'POST', { phone_number: phone, name: name || phone });
+  const e164 = phone.startsWith('+') ? phone : `+${phone}`;
+  const contact = await req('/contacts', 'POST', { phone_number: e164, name: name || phone });
   return contact.id;
 }
 

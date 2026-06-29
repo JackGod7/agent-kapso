@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import express from 'express';
 import { sendText, sendTyping } from './index.js';
 import { transcribeAudio } from './src/transcribe.js';
-import { runAgent } from './src/agent.js';
+import { runAgent, archiveToChatwoot } from './src/agent.js';
 import { getSession, saveSession, resetSession, setHumanMode, sessions, getAllSessions } from './src/state.js';
 
 const app = express();
@@ -60,6 +60,7 @@ async function processMessages(phone, messages, contactInfo, lastMessageId) {
   if (session.completed) {
     const elapsed = session.completedAt ? Date.now() - session.completedAt : 0;
     if (elapsed > RESET_AFTER_MS) {
+      await archiveToChatwoot(phone, session, 'Sesión expirada 24h');
       await resetSession(phone);
       console.log(`[reset] ${phone}: session expired after 24h`);
       // fall through — process as new conversation

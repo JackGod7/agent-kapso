@@ -143,20 +143,7 @@ async function executeTool(name, input, phone, contactInfo) {
         }
       }
 
-      try {
-        const name = session.variables['nombre'] || session.variables['name'] || phone;
-        const contactId = await upsertContact(phone, name);
-        const conversationId = await createConversation(contactId);
-        for (const msg of session.history) {
-          const text = extractText(msg.content);
-          if (!text) continue;
-          await postMessage(conversationId, text, msg.role === 'user' ? 'incoming' : 'outgoing');
-        }
-        console.log(`[CHATWOOT] ${phone} → conversation ${conversationId}`);
-      } catch (err) {
-        console.error(`[CHATWOOT] handoff failed: ${err.message}`);
-      }
-
+      await archiveToChatwoot(phone, session, `HANDOFF: ${input.reason}`);
       return 'handoff_initiated';
     }
 
@@ -187,10 +174,27 @@ async function executeTool(name, input, phone, contactInfo) {
     case 'complete_task':
       session.completed = true;
       session.completedAt = Date.now();
+      await archiveToChatwoot(phone, session, 'Conversación completada');
       return 'completed';
 
     default:
       return `unknown_tool: ${name}`;
+  }
+}
+
+export async function archiveToChatwoot(phone, session, label) {
+  try {
+    const name = session.variables['nombre'] || session.variables['name'] || phone;
+    const contactId = await upsertContact(phone, name);
+    const conversationId = await createConversation(contactId);
+    for (const msg of session.history) {
+      const text = extractText(msg.content);
+      if (!text) continue;
+      await postMessage(conversationId, text, msg.role === 'user' ? 'incoming' : 'outgoing');
+    }
+    console.log(`[CHATWOOT] ${phone} → conversation ${conversationId} (${label})`);
+  } catch (err) {
+    console.error(`[CHATWOOT] archive failed (${label}): ${err.message}`);
   }
 }
 

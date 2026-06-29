@@ -1,159 +1,166 @@
-# Agent Kapso — Arquitectura completa
+# Agent Kapso — Arquitectura
 
-Mapa de qué existe, qué crea, qué actualiza, qué elimina.
-
----
-
-## Archivos del sistema
-
-```
-agent-kapso/
-├── server.js              — HTTP server (Express)
-├── index.js               — WhatsApp client (sendText via Kapso API)
-└── src/
-    ├── agent.js           — Claude agent loop + tool execution
-    ├── state.js           — Session store (in-memory)
-    └── system-prompt.js   — SYSTEM_PROMPT + TOOLS definitions
-```
+> Última actualización: 2026-06-29. Bot de ventas WhatsApp para GH-600 (bootcamp Jack Aguilar).
 
 ---
 
-## Flujo de datos (mensaje entrante)
+## Stack
+
+| Capa | Tecnología | Para qué |
+|---|---|---|
+| Hosting | Railway (autodeploy on push to main) | Runtime + static assets |
+| WhatsApp | Kapso API + `@kapso/whatsapp-cloud-api` | Mensajes in/out, transcripción de audio |
+| AI | Anthropic Claude Sonnet 4.6 | Agent loop + tool use |
+| Transcripción fallback | Groq (Whisper v3) | Si Kapso no provee transcript |
+| Sesiones | Redis/Valkey (ioredis) + in-memory Map | Historial, variables, estado |
+| CRM / archival | Chatwoot | Conversaciones completas, handoff humano |
+
+---
+
+## Archivos que corren en producción
+
+```
+server.js              — Express HTTP server, webhook entrypoint
+index.js               — WhatsApp client: sendText/Doc/Image/Buttons, downloadMedia, saveContactNote
+src/
+  agent.js             — Claude agent loop, executeTool(), archiveToChatwoot()
+  state.js             — getSession/saveSession/resetSession (Redis + in-memory)
+  system-prompt.js     — SYSTEM_PROMPT + TOOLS definitions
+  transcribe.js        — Groq fallback audio transcription
+  chatwoot.js          — upsertContact, createConversation, postMessage
+```
+
+---
+
+## Flujo principal
 
 ```
 Usuario WhatsApp
-  → Kapso Platform
-    → POST /webhook (server.js)
-      → verifySignature()             [lee: req.headers, req.rawBody]
-      → filtro: solo text messages    [BUG: stickers/edits pasan igual]
-      → runAgent(phone, text, info)   [src/agent.js]
-        → getSession(phone)           [crea o lee session en Map]
-        → push user msg → history     [actualiza: session.history]
-        → anthropic.messages.create() [Claude API — lee: SYSTEM_PROMPT, TOOLS, history]
-        → si tool_use → executeTool() [ejecuta tool, push result]
-        → loop hasta end_turn
-        → retorna reply string
-      → sendText(phone, reply)        [index.js → Kapso API → WhatsApp]
+  ↓
+Kapso webhook → POST /webhook
+  ↓ HMAC-SHA256 verify
+  ↓ filtro: type ∈ {text, audio, interactive}
+  ↓ audio → Kapso transcript || Groq fallback → msg.type='text'
+  ↓ debounce 4s (acumula mensajes rápidos)
+  ↓
+processMessages(phone, messages[], contactInfo)
+  ↓ check session.humanMode → skip si activo
+  ↓ check session.completed → skip (o reset si >24h)
+  ↓ sendTyping(phone, messageId)
+  ↓
+runAgent(phone, text, contactInfo)
+  ↓ session.history.push(user_msg)
+  ↓ trim a últimos 20 mensajes
+  ↓ Claude API loop (max 10 rounds)
+    ↓ executeTool() por cada tool_use
+    ↓ until end_turn
+  ↓ reply = último text block
+  ↓
+sendText(phone, reply)
 ```
 
 ---
 
-## Estado de sesión (src/state.js)
+## Endpoints propios
 
-Un objeto por número de teléfono. Vive en memoria RAM. Se pierde al reiniciar.
+| Endpoint | Método | Propósito | Auth |
+|---|---|---|---|
+| `/webhook` | POST | Mensajes Kapso | HMAC-SHA256 |
+| `/chatwoot-webhook` | POST | Eventos Chatwoot | HMAC-SHA256 |
+| `/health` | GET | Estado + métricas básicas | Ninguna |
+| `/stats` | GET | Funnel JSON | Ninguna ⚠️ |
+| `/dashboard` | GET | Funnel HTML | Ninguna ⚠️ |
+| `/temario` | GET | PDF estático | Ninguna |
+| `/testimonios` | GET | JPG estático | Ninguna |
+
+---
+
+## APIs externas consumidas
+
+| Servicio | URL base | Credencial | Propósito |
+|---|---|---|---|
+| Kapso WhatsApp | `https://api.kapso.ai/meta/whatsapp` | `KAPSO_API_KEY` | Mensajes in/out |
+| Kapso Platform | `https://api.kapso.ai/platform/v1` | `KAPSO_API_KEY` | Broadcasts, contact notes |
+| Anthropic | SDK | `ANTHROPIC_API_KEY` | Claude agent |
+| Groq | SDK | `GROQ_API_KEY` | Transcripción fallback |
+| Chatwoot | `CHATWOOT_BASE_URL` | `CHATWOOT_API_TOKEN` | CRM / archival |
+| Redis/Valkey | `REDIS_URL` | — | Sesiones persistentes |
+
+---
+
+## Tools del agente
+
+| Tool | Acción en state | Cuándo |
+|---|---|---|
+| `get_whatsapp_context` | Lee contactInfo | Primera interacción |
+| `get_variable(name)` | Lee session.variables | Antes de personalizar |
+| `save_variable(name, value)` | Escribe session.variables | Nombre, experiencia, objetivo |
+| `ask_with_buttons(body, buttons)` | Envía interactive msg | FASE 1 preguntas |
+| `send_material(type)` | Envía PDF/imagen vía Kapso | temario, testimonios |
+| `save_contact_note(note)` | Kapso contacts.update [ROTO] | Antes de handoff |
+| `handoff_to_human(reason)` | completed=true → Chatwoot + notif Jack | Precio / inscripción / pide Jack |
+| `complete_task()` | completed=true → Chatwoot | Rechazo definitivo |
+
+---
+
+## Sesión (estado por número)
 
 ```js
 {
-  phase: 'nuevo',       // string — no usado actualmente por el agent
-  variables: {},        // Map de save_variable() calls
-  history: [],          // Array de mensajes Claude (crece sin límite ⚠️)
-  waiting: false,       // set por enter_waiting (being removed en v2)
-  completed: false,     // set por complete_task() o handoff_to_human()
+  history: [],          // últimos N mensajes (Redis + in-memory, HISTORY_WINDOW=20 al enviar a Claude)
+  variables: {},        // datos del prospecto (nombre, fase, perfil, etc.)
+  completed: false,     // true → bot silenciado (reset automático a las 24h)
+  completedAt: null,    // timestamp para calcular expiración
+  humanMode: false,     // true → Chatwoot tomó control, bot silenciado
+  totalTokens: 0,       // acumulado de tokens (alerta si >50k)
+  source: 'organic',    // atribución: tiktok, facebook_ad, instagram_ad, meta_referral
+  lastReply: null,      // dedup de respuestas idénticas consecutivas
 }
 ```
 
-**CREA**: `getSession(phone)` — si no existe, crea nueva sesión vacía  
-**ACTUALIZA**: cada mensaje push a `history`; `save_variable` actualiza `variables`  
-**NUNCA ELIMINA**: sessions Map nunca hace `.delete()` — memory leak en producción ⚠️
+---
+
+## Archival de conversaciones (implementado 2026-06-29)
+
+`archiveToChatwoot(phone, session, label)` se llama en 3 casos:
+1. `handoff_to_human` — prospecto listo para Jack
+2. `complete_task` — rechazo definitivo
+3. Reset por 24h — sesión expirada, nueva conversación
+
+Chatwoot recibe: contacto (E.164), conversación, todos los mensajes del historial.
 
 ---
 
-## Tools disponibles (src/system-prompt.js → TOOLS)
+## Backlog de features
 
-| Tool | Qué hace al state |
-|---|---|
-| `get_whatsapp_context` | Lee: `contactInfo` (externo, no state) |
-| `get_variable(name)` | Lee: `session.variables[name]` |
-| `save_variable(name, value)` | **Actualiza**: `session.variables[name]` |
-| `handoff_to_human(reason)` | **Actualiza**: `session.completed = true` |
-| `complete_task()` | **Actualiza**: `session.completed = true` |
-| ~~`enter_waiting()`~~ | ~~Actualizaba: `session.waiting = true`~~ (eliminada en v2) |
-
----
-
-## Kapso API (externa)
-
-Usada en dos direcciones:
-
-**Inbound** (Kapso → nosotros):
-- `POST /webhook` — eventos de mensajes WhatsApp
-- Header `x-webhook-event: whatsapp.message.received`
-- Body: `{ message: { type, text, ... }, conversation: { phone_number, kapso: { contact_name } } }`
-
-**Outbound** (nosotros → Kapso):
-- `sendText(to, body)` via `@kapso/whatsapp-cloud-api`
-- Endpoint: `https://api.kapso.ai/meta/whatsapp`
-- Auth: `KAPSO_API_KEY`
-
-**Observabilidad** (nosotros → Kapso, scripts en .agents/):
-- `GET /platform/v1/whatsapp/conversations` — listar conversaciones
-- `GET /platform/v1/whatsapp/messages` — listar mensajes
-- `GET /platform/v1/whatsapp/conversations/:id` — detalle de conversación
+| Feature | Prioridad | Estado |
+|---|---|---|
+| `conversation-archival` | Alta | ✅ implementado |
+| `save_contact_note` fix (endpoint Kapso) | Media | ⏳ pendiente — confirmar endpoint real |
+| `/stats /dashboard` auth básica | Media | ⏳ pendiente |
+| Broadcasts | Alta | 🔴 bloqueado — Meta business verification |
+| Knowledge base tool (FAQ, precios dinámicos) | Media | ⏳ pendiente |
+| Multi-canal (Instagram DM, web chat) | Baja | ⏳ depende de Kapso |
+| Leads DB persistente (Postgres) | Baja | ⏳ evaluar si Redis no alcanza |
 
 ---
 
-## Bugs conocidos en producción
+## Visión: Agente de Marca Personal Jack Aguilar
 
-| # | Archivo | Línea | Problema |
-|---|---|---|---|
-| B1 | server.js | 43 | Unsupported msgs (stickers, edits, audio) no filtrados → Claude recibe texto de error |
-| B2 | server.js | 52 | No verifica `session.completed` → bot responde después de handoff |
-| B3 | agent.js | 76-79 | `enter_waiting` llamaba Claude de nuevo → mensajes repetidos (en v2 se elimina) |
-| B4 | agent.js | 73 | `handoff_to_human` no notifica a Jack |
-| B5 | state.js | 3 | `sessions` Map nunca limpia → memory leak |
-| B6 | state.js | 8 | `session.history` crece sin límite → tokens explotan en conversaciones largas |
-| B7 | server.js | — | No deduplicación por message ID → si Kapso reintenta, mensaje procesado dos veces |
+El bot actual califica leads para GH-600. La visión es un agente multicanal que:
 
----
+1. **Califica** prospectos (actual) → WhatsApp
+2. **Educa** sobre la marca Jack (futuro) → responde preguntas de contenido, portfolio
+3. **Nurtured** leads fríos con broadcasts programados
+4. **Archiva** todo en CRM (Chatwoot) para que Jack tenga contexto completo de cada persona
+5. **Escala** a otros productos/bootcamps sin reescribir — solo nuevo SYSTEM_PROMPT + TOOLS
 
-## Bugs adicionales (de revisión de conversaciones reales)
-
-| # | Archivo | Observado | Problema |
-|---|---|---|---|
-| B8 | server.js | Jack conv | Bot responde a cada mensaje por separado — usuario manda 3 en 5s → 3 respuestas |
-| B9 | server.js/index.js | Jack conv | Sin typing indicator → bot aparece de la nada, parece robótico |
-| B10 | agent.js | Jack conv | Post-rechazo ("no quiero comprar") bot sigue respondiendo — complete_task no se llama |
-| B11 | system-prompt | Jack conv | session.completed=true persiste para siempre → usuario que vuelve días después queda silenciado |
-| B12 | index.js | Jack conv | Solo sendText — no puede enviar temario/PDF/imágenes cuando prospecto pide evidencia |
-| B13 | agent.js | Jack conv | Claude usó carácter Cirílico 'р' en "agрupar" — encoding bug del modelo |
+El bot nunca cierra. Jack cierra. El bot prepara.
 
 ---
 
-## Changes en openspec (estado)
+## Git / Deploy
 
-### 🔴 Crítico (bugs en producción hoy)
-| Change | Estado |
-|---|---|
-| `fix-message-filtering` | ⏳ spec listo — stickers/edits crashean bot, session.completed ignorado |
-| `silence-after-completion` | ⏳ spec listo — bot habla después de handoff/rechazo |
-| `message-batching` | ⏳ spec listo — responde cada mensaje por separado |
-
-### 🟡 Alta prioridad (UX y ventas)
-| Change | Estado |
-|---|---|
-| `agent-sales-prompt-v2` | 🔄 en implementación (otra sesión) |
-| `jack-handoff-notification` | ⏳ spec listo — Jack no se entera de leads |
-| `fix-repeated-messages` | ⏳ spec listo — safety net para msgs duplicados |
-| `typing-indicator` | ⏳ spec listo — hacer el bot más humano |
-| `whatsapp-media-outbound` | ⏳ spec listo — enviar temario/testimonios como PDF/imagen |
-
-### 🟠 Infraestructura (antes de escalar)
-| Change | Estado |
-|---|---|
-| `history-trimming` | ⏳ spec listo — tokens explotan en convos largas |
-| `session-persistence` | ⏳ spec listo — sesiones se pierden al reiniciar |
-| `chatwoot-kapso-architecture` | ⏳ pendiente — requiere Chatwoot en Railway |
-
-### ✅ Completado
-| Change | Estado |
-|---|---|
-| `deploy-webhook-kapso` | ✅ completo — bot en producción Railway |
-
----
-
-## Estado del repositorio (2026-06-27)
-
-- **Git**: repo padre en `products/` — `agent-kapso/` completamente sin commitear
-- **Remote**: ninguno — no hay GitHub
-- **Branches**: solo `master` en el repo padre
-- **Riesgo**: TODO el código vive solo en disco local — cualquier problema de disco = pérdida total
+- Rama: `main` → Railway autodeploy
+- Env vars: Railway (no en repo)
+- `.env` local: solo para dev/debug, no comitear
