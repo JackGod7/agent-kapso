@@ -215,12 +215,17 @@ app.post('/webhook', async (req, res) => {
 
   for (const event of events) {
     const msg = event.message;
-    if (!msg || !PROCESSABLE_TYPES.includes(msg.type)) continue;
-
     const phone = event.conversation?.phone_number;
     const contactInfo = { contact_name: event.conversation?.kapso?.contact_name };
 
     if (!phone) continue;
+
+    if (!msg || !PROCESSABLE_TYPES.includes(msg.type)) {
+      if (msg?.type && phone) {
+        sendText(phone, 'Solo puedo leer mensajes de texto y audios 🙏 Escríbeme lo que quieras saber.').catch(() => {});
+      }
+      continue;
+    }
 
     // Audio → Kapso transcript first, Groq as fallback
     if (msg.type === 'audio') {
