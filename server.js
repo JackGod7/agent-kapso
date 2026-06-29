@@ -15,7 +15,8 @@ app.use(express.json({
 
 const PORT = process.env.PORT || 3000;
 const WEBHOOK_SECRET = process.env.KAPSO_WEBHOOK_SECRET;
-const PROCESSABLE_TYPES = ['text', 'interactive'];
+const PROCESSABLE_TYPES = ['text', 'interactive', 'audio'];
+const AUDIO_REPLY = 'Solo puedo responder mensajes de texto. Escríbeme y con gusto te ayudo 👋';
 const DEBOUNCE_MS = 4000;
 const RESET_AFTER_MS = 24 * 60 * 60 * 1000;
 
@@ -212,7 +213,15 @@ app.post('/webhook', async (req, res) => {
       : (msg.text?.body || msg.kapso?.content || '');
     const contactInfo = { contact_name: event.conversation?.kapso?.contact_name };
 
-    if (!phone || !text.trim()) continue;
+    if (!phone) continue;
+
+    // Audio → polite redirect, don't enter agent loop
+    if (msg.type === 'audio') {
+      await sendText(phone, AUDIO_REPLY).catch(() => {});
+      continue;
+    }
+
+    if (!text.trim()) continue;
 
     // Source attribution: referral (Meta ads) or magic-word prefix in opening text
     if (event.is_new_conversation) {
