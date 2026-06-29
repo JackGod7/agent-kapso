@@ -75,4 +75,46 @@ test('contactInfo.contact_name fallback',() => assert.equal(resolveName({}, {con
 test('phone last resort',               () => assert.equal(resolveName({}, {}, '51900001'), '51900001'));
 test('undefined contactInfo safe',      () => assert.equal(resolveName({}, undefined, '51900001'), '51900001'));
 
+// ── T16: structured log shapes ───────────────────────────────────────────────
+console.log('\n6. chatwoot structured log shapes');
+test('chatwoot_forward_ok shape', () => {
+  const log = { type: 'chatwoot_forward_ok', phone_suffix: '2214',
+    direction: 'incoming', conversation_id: 21, chars: 12 };
+  assert.ok(log.type === 'chatwoot_forward_ok');
+  assert.ok(typeof log.phone_suffix === 'string' && log.phone_suffix.length === 4);
+  assert.ok(log.direction === 'incoming' || log.direction === 'outgoing');
+  assert.ok(typeof log.conversation_id === 'number');
+  assert.ok(typeof log.chars === 'number');
+});
+test('chatwoot_forward_error shape', () => {
+  const log = { type: 'chatwoot_forward_error', phone_suffix: '2214',
+    direction: 'outgoing', error: 'Chatwoot POST /x → 503', http_status: '503' };
+  assert.ok(log.type === 'chatwoot_forward_error');
+  assert.ok(typeof log.error === 'string');
+  assert.ok(typeof log.http_status === 'string');
+});
+test('chatwoot_conv_created shape', () => {
+  const log = { type: 'chatwoot_conv_created', phone_suffix: '2214',
+    conversation_id: 22, contact_id: 9 };
+  assert.ok(log.type === 'chatwoot_conv_created');
+  assert.ok(typeof log.conversation_id === 'number');
+  assert.ok(typeof log.contact_id === 'number');
+});
+test('chatwoot_conv_updated shape', () => {
+  const log = { type: 'chatwoot_conv_updated', phone_suffix: '2214',
+    conversation_id: 21, status: 'open', label: 'HANDOFF: x' };
+  assert.ok(log.type === 'chatwoot_conv_updated');
+  assert.ok(log.status === 'open' || log.status === 'resolved');
+  assert.ok(typeof log.conversation_id === 'number');
+});
+test('http_status extracted from error', () => {
+  const msg = 'Chatwoot POST /conversations/21/messages → 503';
+  const httpStatus = msg.match(/→ (\d+)/)?.[1] || 'unknown';
+  assert.equal(httpStatus, '503');
+});
+test('http_status unknown when no match', () => {
+  const httpStatus = 'AbortError: fetch aborted'.match(/→ (\d+)/)?.[1] || 'unknown';
+  assert.equal(httpStatus, 'unknown');
+});
+
 console.log(`\n${passed} tests passed\n`);
