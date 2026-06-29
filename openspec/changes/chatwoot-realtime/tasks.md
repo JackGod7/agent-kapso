@@ -8,18 +8,18 @@ Rama de trabajo: `feature/chatwoot-realtime`
 
 Estos items no son código — son configuración de Chatwoot y Railway que el deploy depende de.
 
-- [ ] **P1** — Crear labels en Chatwoot Settings → Labels:
+- [x] **P1** — Crear labels en Chatwoot Settings → Labels:
   - `handoff` (para conversaciones de handoff_to_human)
   - `completada` (para conversaciones de complete_task)
   - `expirada-24h` (para sesiones que expiran)
   - Verificar: aparecen en la lista de labels al crear un mensaje en Chatwoot
   - Referencia: `specs/chatwoot-session.md` → "Chatwoot conversation status lifecycle"
 
-- [ ] **P2** — Verificar `CHATWOOT_INBOX_ID` en Railway env vars:
+- [x] **P2** — Verificar `CHATWOOT_INBOX_ID` en Railway env vars:
   - Debe ser el ID del inbox "WhatsApp Kapso - GH600" (actualmente ID=2)
   - Verificar: Railway → agent-kapso → Variables → `CHATWOOT_INBOX_ID=2`
 
-- [ ] **P3** — Verificar `CHATWOOT_API_TOKEN` válido y `CHATWOOT_BASE_URL` correcto:
+- [x] **P3** — Verificar `CHATWOOT_API_TOKEN` válido y `CHATWOOT_BASE_URL` correcto:
   ```bash
   curl -H "api_access_token: $CHATWOOT_API_TOKEN" \
     $CHATWOOT_BASE_URL/api/v1/profile
@@ -35,20 +35,20 @@ Las tareas siguen el orden de dependencias del diagrama en `design.md`. **No imp
 
 ### `src/chatwoot.js`
 
-- [ ] **T0** *(crítico — implementar primero)* — Agregar `AbortController` timeout de 8s a la función interna `req()`:
+- [x] **T0** *(crítico — implementar primero)* — Agregar `AbortController` timeout de 8s a la función interna `req()`:
   - Envolver fetch con `AbortController` + `setTimeout(8000)`
   - `finally { clearTimeout(timer) }` para no dejar timers colgados
   - Código exacto en `design.md` → "T0 — Agregar AbortController"
   - Validar: `node -r dotenv/config -e "import('./src/chatwoot.js').then(m => m.upsertContact('51900000099', 'test'))"` → retorna en < 8s
 
-- [ ] **T1** — Agregar función interna `updateConversationStatus(conversationId, status, label)`:
+- [x] **T1** — Agregar función interna `updateConversationStatus(conversationId, status, label)`:
   - PATCH `/conversations/:id` con `{ status }`
   - Si `label` presente: POST `/conversations/:id/labels` con `{ labels: [label.slice(0, 25)] }`
   - Truncar label a 25 chars (límite Chatwoot) — label completo sigue en logs
   - No exportar (uso interno de `archiveToChatwoot`)
   - Código exacto en `design.md` → "T1"
 
-- [ ] **T2** — Agregar función interna `ensureChatwootConversation(phone, session, contactInfo)`:
+- [x] **T2** — Agregar función interna `ensureChatwootConversation(phone, session, contactInfo)`:
   - Guard: `if (session.chatwootConversationId) return session.chatwootConversationId`
   - Name resolution: `variables.nombre || variables.name || contactInfo?.contact_name || phone`
   - POST /conversations con `additional_attributes: { source: 'kapso-whatsapp' }`
@@ -58,7 +58,7 @@ Las tareas siguen el orden de dependencias del diagrama en `design.md`. **No imp
   - Código exacto en `design.md` → "T2"
   - Specs validadas: `specs/real-time-forwarding.md` Escenarios 1, 2, 5
 
-- [ ] **T3** — Agregar función exportada `chatwootForward(phone, session, text, direction, contactInfo)`:
+- [x] **T3** — Agregar función exportada `chatwootForward(phone, session, text, direction, contactInfo)`:
   - Guard: `if (!text?.trim()) return` para no postear mensajes vacíos
   - Llama `ensureChatwootConversation` + `postMessage`
   - try/catch total: NUNCA relanzar
@@ -67,13 +67,13 @@ Las tareas siguen el orden de dependencias del diagrama en `design.md`. **No imp
   - Código exacto en `design.md` → "T3"
   - Specs validadas: Escenarios 1, 2, 3, 4, 5, 6
 
-- [ ] **T4** — Mover función interna `extractText(content)` de `agent.js` a `chatwoot.js`:
+- [x] **T4** — Mover función interna `extractText(content)` de `agent.js` a `chatwoot.js`:
   - Copiar la función (no exportar — es interna)
   - En `agent.js`: eliminar la definición
   - Verificar: `node tests/agent-unit.mjs` sigue verde (extractText tests son de lógica pura, no importan desde chatwoot.js)
   - Refs: `design.md` → "T4"
 
-- [ ] **T5** — Actualizar `archiveToChatwoot(phone, session, label, contactInfo)` (mover de agent.js + hacer idempotente):
+- [x] **T5** — Actualizar `archiveToChatwoot(phone, session, label, contactInfo)` (mover de agent.js + hacer idempotente):
   - Si `session.chatwootConversationId` existe (truthy, > 0): branch idempotente
     - Llamar `updateConversationStatus(id, status, label)`
     - `status = label.startsWith('HANDOFF') ? 'open' : 'resolved'`
@@ -85,7 +85,7 @@ Las tareas siguen el orden de dependencias del diagrama en `design.md`. **No imp
   - Código exacto en `design.md` → "T5"
   - Specs validadas: Escenarios 5, 6, 7, 8, 10
 
-- [ ] **T5b** — En `executeTool` (`agent.js`), forward `ask_with_buttons` body a Chatwoot como outgoing:
+- [x] **T5b** — En `executeTool` (`agent.js`), forward `ask_with_buttons` body a Chatwoot como outgoing:
   ```js
   case 'ask_with_buttons': {
     const { body, buttons } = input;
@@ -103,14 +103,14 @@ Las tareas siguen el orden de dependencias del diagrama en `design.md`. **No imp
 
 Estas tareas son cleanup — solo eliminación e imports. No hay nueva lógica.
 
-- [ ] **T10** — Eliminar función `archiveToChatwoot` de `agent.js` (~líneas 194-208):
+- [x] **T10** — Eliminar función `archiveToChatwoot` de `agent.js` (~líneas 194-208):
   - Verificar que chatwoot.js ya la exporta (T5 completado) antes de eliminar
   - No borrar los callers en `handoff_to_human` y `complete_task` — solo la definición
 
-- [ ] **T11** — Eliminar función `extractText` de `agent.js` (~líneas 210-215):
+- [x] **T11** — Eliminar función `extractText` de `agent.js` (~líneas 210-215):
   - Verificar que chatwoot.js la tiene internamente (T4 completado) antes de eliminar
 
-- [ ] **T12** — Actualizar import al inicio de `agent.js`:
+- [x] **T12** — Actualizar import al inicio de `agent.js`:
   ```js
   // ANTES:
   import { upsertContact, createConversation, postMessage } from './chatwoot.js';
@@ -122,7 +122,7 @@ Estas tareas son cleanup — solo eliminación e imports. No hay nueva lógica.
 
 ### `server.js`
 
-- [ ] **T6** — Actualizar imports al inicio de `server.js`:
+- [x] **T6** — Actualizar imports al inicio de `server.js`:
   ```js
   // ANTES:
   import { runAgent, archiveToChatwoot } from './src/agent.js';
@@ -132,14 +132,14 @@ Estas tareas son cleanup — solo eliminación e imports. No hay nueva lógica.
   import { chatwootForward, archiveToChatwoot } from './src/chatwoot.js';
   ```
 
-- [ ] **T7** — En `processMessages`, agregar `chatwootForward` ANTES de `runAgent`:
+- [x] **T7** — En `processMessages`, agregar `chatwootForward` ANTES de `runAgent`:
   ```js
   await chatwootForward(phone, session, text, 'incoming', contactInfo);
   ```
   - Posición exacta: después de `sendTyping`, antes de `saveSession` (T8)
   - Specs validadas: Escenarios 1, 2, 9, 13, 14
 
-- [ ] **T8** — En `processMessages`, agregar `saveSession` DESPUÉS del forward incoming:
+- [x] **T8** — En `processMessages`, agregar `saveSession` DESPUÉS del forward incoming:
   ```js
   await saveSession(phone, session); // persiste chatwootConversationId a Redis
   ```
@@ -147,7 +147,7 @@ Estas tareas son cleanup — solo eliminación e imports. No hay nueva lógica.
   - Crítico: sin esto, si el proceso reinicia durante runAgent, el ID se pierde
   - Specs validadas: `specs/chatwoot-session.md` → "Persistencia"
 
-- [ ] **T9** — En `processMessages`, agregar `chatwootForward` DESPUÉS de `runAgent`, ANTES de `sendText`:
+- [x] **T9** — En `processMessages`, agregar `chatwootForward` DESPUÉS de `runAgent`, ANTES de `sendText`:
   ```js
   if (reply && reply.trim() !== prevReply?.trim()) {
     await chatwootForward(phone, session, reply, 'outgoing', contactInfo); // ← T9
@@ -163,7 +163,7 @@ Estas tareas son cleanup — solo eliminación e imports. No hay nueva lógica.
 
 Los tests deben implementarse DESPUÉS de T0-T12. Los tests no pueden pasar si la implementación no existe.
 
-- [ ] **T13** — Crear `tests/chatwoot-realtime.integration.mjs` — flujo completo (2 mensajes):
+- [x] **T13** — Crear `tests/chatwoot-realtime.integration.mjs` — flujo completo (2 mensajes):
   ```
   SETUP: resetSession(TEST_PHONE); limpiar convs de Chatwoot del test phone (si aplica)
   1. Enviar webhook "test msg 1" → esperar 6s
@@ -179,7 +179,7 @@ Los tests deben implementarse DESPUÉS de T0-T12. Los tests no pueden pasar si l
   - Si falla en paso 5: T8 no está implementado o saveSession falla
   - Si falla en paso 7: `ensureChatwootConversation` no es idempotente
 
-- [ ] **T14** — En `tests/chatwoot-realtime.integration.mjs`, agregar test de status update:
+- [x] **T14** — En `tests/chatwoot-realtime.integration.mjs`, agregar test de status update:
   ```
   CONTINUA desde T13 (misma conv)
   1. Enviar webhook "quiero hablar con Jack" → esperar 15s (Claude time)
@@ -201,7 +201,7 @@ Los tests deben implementarse DESPUÉS de T0-T12. Los tests no pueden pasar si l
   - Este test corre localmente con `BOT_URL=http://localhost:3000/webhook` y bot corriendo con URL inválida
   - Documenta: bot sigue funcionando, Chatwoot es degradación graceful
 
-- [ ] **T16** — Agregar a `tests/agent-unit.mjs` — verificar shapes de structured logs:
+- [x] **T16** — Agregar a `tests/agent-unit.mjs` — verificar shapes de structured logs:
   ```js
   // chatwoot_forward_ok shape
   const okLog = { type: 'chatwoot_forward_ok', phone_suffix: '2214',
@@ -215,7 +215,7 @@ Los tests deben implementarse DESPUÉS de T0-T12. Los tests no pueden pasar si l
   assert.ok(errLog.type && errLog.error && errLog.http_status);
   ```
 
-- [ ] **T17** — Actualizar `tests/bot-e2e-reject.mjs`:
+- [x] **T17** — Actualizar `tests/bot-e2e-reject.mjs`:
   - En `getLatestChatwootConversation()`: verificar que `conv.status === 'resolved'` después de `complete_task`
   - Agregar al output: `✓ Chatwoot conversation ${conv.id}: status=${conv.status}`
   - Si `conv.status !== 'resolved'`: `assert.fail` con mensaje descriptivo
@@ -242,7 +242,7 @@ Los tests deben implementarse DESPUÉS de T0-T12. Los tests no pueden pasar si l
 
 Ejecutar en orden. No pasar al siguiente si el anterior falla.
 
-- [ ] **V1** — Crear rama `feature/chatwoot-realtime` y hacer push:
+- [x] **V1** — Crear rama `feature/chatwoot-realtime` y hacer push:
   ```bash
   git checkout -b feature/chatwoot-realtime
   # commits T0-T19
