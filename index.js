@@ -29,7 +29,7 @@ export async function sendButtons(to, bodyText, buttons) {
 }
 
 export async function downloadMedia(mediaId) {
-  const buf = await whatsapp.media.download({ mediaId, phoneNumberId: PHONE_NUMBER_ID });
+  const buf = await whatsapp.media.download({ mediaId, phoneNumberId: PHONE_NUMBER_ID, auth: 'always' });
   return Buffer.from(buf);
 }
 
