@@ -8,7 +8,7 @@
 ## Pre-implementación
 - [x] Confirmar payload de audio: log `audio_payload` en prod — implementado fallback url/id
 - [x] Verificar si `groq-sdk` ya está en node_modules — no estaba, instalado
-- [ ] Obtener `GROQ_API_KEY` en https://console.groq.com
+- [x] Obtener `GROQ_API_KEY` en https://console.groq.com
 
 ## Implementación
 
@@ -32,10 +32,10 @@
 - [x] Mantener log `audio_payload` para confirmar estructura en prod
 
 ## Railway
-- [ ] Agregar `GROQ_API_KEY` en variables del servicio agent-kapso
+- [x] Agregar `GROQ_API_KEY` en variables del servicio agent-kapso
 
 ## QA
-- [ ] Enviar nota de voz → bot responde con el contenido transcrito
-- [ ] Audio en español → transcript en español, no inglés
-- [ ] Audio corrupto / silencio → bot silencioso (no crash)
-- [ ] Verificar log `audio_transcribed` en Railway con chars > 0
+- [x] Enviar nota de voz → bot responde con el contenido transcrito
+- [x] Audio en español → transcript en español, no inglés
+- [x] Audio corrupto / silencio → bot silencioso (no crash)
+- [x] Verificar log `audio_transcribed` en Railway con chars > 0
