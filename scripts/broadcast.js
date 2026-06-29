@@ -88,6 +88,7 @@ const created = await kapso('POST', '/whatsapp/broadcasts', {
   },
 });
 const id = created.id ?? created.data?.id ?? created.whatsapp_broadcast?.id;
+if (!id) throw new Error(`Broadcast created but no ID in response: ${JSON.stringify(created)}`);
 console.log(`Broadcast created: ${id}`);
 
 // 2. Add recipients in batches of 1000

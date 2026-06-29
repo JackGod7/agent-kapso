@@ -38,7 +38,11 @@ export async function saveContactNote(phone, note) {
 
 export async function downloadMedia(mediaId) {
   const buf = await whatsapp.media.download({ mediaId, phoneNumberId: PHONE_NUMBER_ID, auth: 'always' });
-  return Buffer.isBuffer(buf) ? buf : Buffer.from(buf instanceof ArrayBuffer ? buf : buf.buffer ?? buf);
+  if (!buf) throw new Error('downloadMedia: SDK returned null');
+  if (Buffer.isBuffer(buf)) return buf;
+  if (buf instanceof ArrayBuffer) return Buffer.from(buf);
+  if (ArrayBuffer.isView(buf)) return Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength);
+  return Buffer.from(buf);
 }
 
 // ponytail: minimal bootstrap — add webhook handler, templates, flows as needed
