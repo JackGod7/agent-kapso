@@ -46,6 +46,15 @@ function verifyChatwootSignature(req) {
 // Debounce buffer: phone → { timer, messages[], contactInfo }
 const pendingMessages = new Map();
 
+// Per-phone serial queue — prevents concurrent runAgent for same phone
+const phoneQueues = new Map();
+function enqueue(phone, fn) {
+  const prev = phoneQueues.get(phone) ?? Promise.resolve();
+  const next = prev.then(fn).catch(() => {});
+  phoneQueues.set(phone, next);
+  next.finally(() => { if (phoneQueues.get(phone) === next) phoneQueues.delete(phone); });
+}
+
 async function processMessages(phone, messages, contactInfo, lastMessageId) {
   const text = messages.join('\n');
   if (!text.trim()) return;
@@ -269,10 +278,10 @@ app.post('/webhook', async (req, res) => {
     }
 
     const pending = pendingMessages.get(phone);
-    pending.timer = setTimeout(async () => {
+    pending.timer = setTimeout(() => {
       const { messages, contactInfo, lastMessageId } = pendingMessages.get(phone);
       pendingMessages.delete(phone);
-      await processMessages(phone, messages, contactInfo, lastMessageId);
+      enqueue(phone, () => processMessages(phone, messages, contactInfo, lastMessageId));
     }, DEBOUNCE_MS);
   }
 });
