@@ -214,7 +214,7 @@ app.post('/webhook', async (req, res) => {
 
     // Audio → transcribe and inject as text into normal flow
     if (msg.type === 'audio') {
-      console.log(JSON.stringify({ type: 'audio_payload', msg }));
+      console.log(JSON.stringify({ type: 'audio_payload', audio_id: msg.audio?.id, audio_url: msg.audio?.url, mime: msg.audio?.mime_type }));
       const transcript = await transcribeAudio(msg.audio, phone);
       if (!transcript) continue;
       msg.type = 'text';
