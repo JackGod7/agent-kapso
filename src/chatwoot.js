@@ -21,7 +21,7 @@ export async function upsertContact(phone, name) {
   if (existing) return existing.id;
   const e164 = phone.startsWith('+') ? phone : `+${phone}`;
   const contact = await req('/contacts', 'POST', { phone_number: e164, name: name || phone });
-  return contact.id;
+  return contact.payload?.contact?.id ?? contact.id;
 }
 
 export async function createConversation(contactId) {
