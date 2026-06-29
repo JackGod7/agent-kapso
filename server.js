@@ -66,25 +66,25 @@ async function processMessages(phone, messages, contactInfo, lastMessageId) {
     return;
   }
 
-  if (session.completed) {
-    const elapsed = session.completedAt ? Date.now() - session.completedAt : 0;
-    if (elapsed > RESET_AFTER_MS) {
-      await archiveToChatwoot(phone, session, 'Sesión expirada 24h');
-      await resetSession(phone);
-      console.log(`[reset] ${phone}: session expired after 24h`);
-      // fall through — process as new conversation
-    } else {
-      console.log(`[silent] ${phone}: session completed, ignoring`);
-      completedSessions++;
-      return;
-    }
-  }
-
   try {
+    if (session.completed) {
+      const elapsed = session.completedAt ? Date.now() - session.completedAt : 0;
+      if (elapsed > RESET_AFTER_MS) {
+        await archiveToChatwoot(phone, session, 'Sesión expirada 24h', contactInfo);
+        await resetSession(phone);
+        console.log(`[reset] ${phone}: session expired after 24h`);
+        // fall through — process as new conversation
+      } else {
+        console.log(`[silent] ${phone}: session completed, ignoring`);
+        completedSessions++;
+        return;
+      }
+    }
+
     if (lastMessageId) await sendTyping(phone, lastMessageId).catch(() => {});
+    const prevReply = session.lastReply;
     const reply = await runAgent(phone, text, contactInfo);
-    if (reply && reply.trim() !== session.lastReply?.trim()) {
-      session.lastReply = reply;
+    if (reply && reply.trim() !== prevReply?.trim()) {
       await sendText(phone, reply);
     }
   } catch (err) {

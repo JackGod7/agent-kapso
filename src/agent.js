@@ -33,6 +33,7 @@ export async function runAgent(phone, userText, contactInfo) {
   while (true) {
     if (++rounds > MAX_TOOL_ROUNDS) {
       console.error(`[agent] ${phone}: max tool rounds (${MAX_TOOL_ROUNDS}) exceeded — breaking`);
+      reply = 'Tuve un problema procesando tu mensaje. Por favor intenta de nuevo.';
       break;
     }
     const response = await anthropic.messages.create({
@@ -62,11 +63,16 @@ export async function runAgent(phone, userText, contactInfo) {
     const toolResults = await Promise.all(
       response.content
         .filter(b => b.type === 'tool_use')
-        .map(async b => ({
-          type: 'tool_result',
-          tool_use_id: b.id,
-          content: String(await executeTool(b.name, b.input, phone, contactInfo).catch(err => `tool_error: ${err.message}`)),
-        }))
+        .map(async b => {
+          let content, isError = false;
+          try {
+            content = String(await executeTool(b.name, b.input, phone, contactInfo));
+          } catch (err) {
+            content = `tool_error: ${err.message}`;
+            isError = true;
+          }
+          return { type: 'tool_result', tool_use_id: b.id, content, ...(isError && { is_error: true }) };
+        })
     );
 
     messages.push({ role: 'user', content: toolResults });
@@ -90,6 +96,7 @@ export async function runAgent(phone, userText, contactInfo) {
     console.log(JSON.stringify({ type: 'cost_alert', phone_suffix: phone.slice(-4), tokens: session.totalTokens }));
   }
 
+  session.lastReply = reply;
   await saveSession(phone, session);
   return reply;
 }
@@ -144,7 +151,7 @@ async function executeTool(name, input, phone, contactInfo) {
         }
       }
 
-      await archiveToChatwoot(phone, session, `HANDOFF: ${input.reason}`);
+      await archiveToChatwoot(phone, session, `HANDOFF: ${input.reason}`, contactInfo);
       return 'handoff_initiated';
     }
 
@@ -176,7 +183,7 @@ async function executeTool(name, input, phone, contactInfo) {
       if (session.completed) return 'already_completed';
       session.completed = true;
       session.completedAt = Date.now();
-      await archiveToChatwoot(phone, session, 'Conversación completada');
+      await archiveToChatwoot(phone, session, 'Conversación completada', contactInfo);
       return 'completed';
 
     default:
@@ -184,16 +191,16 @@ async function executeTool(name, input, phone, contactInfo) {
   }
 }
 
-export async function archiveToChatwoot(phone, session, label) {
+export async function archiveToChatwoot(phone, session, label, contactInfo) {
   try {
-    const name = session.variables['nombre'] || session.variables['name'] || phone;
+    const name = session.variables['nombre'] || session.variables['name'] || contactInfo?.contact_name || phone;
     const contactId = await upsertContact(phone, name);
+    if (!contactId) throw new Error('upsertContact returned undefined');
     const conversationId = await createConversation(contactId);
-    for (const msg of session.history) {
-      const text = extractText(msg.content);
-      if (!text) continue;
-      await postMessage(conversationId, text, msg.role === 'user' ? 'incoming' : 'outgoing');
-    }
+    const messages = session.history
+      .map(msg => ({ text: extractText(msg.content), dir: msg.role === 'user' ? 'incoming' : 'outgoing' }))
+      .filter(m => m.text);
+    await Promise.all(messages.map(m => postMessage(conversationId, m.text, m.dir)));
     console.log(`[CHATWOOT] ${phone} → conversation ${conversationId} (${label})`);
   } catch (err) {
     console.error(`[CHATWOOT] archive failed (${label}): ${err.message}`);
