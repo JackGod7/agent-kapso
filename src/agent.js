@@ -116,6 +116,7 @@ async function executeTool(name, input, phone, contactInfo) {
       return 'note_saved';
 
     case 'handoff_to_human': {
+      if (session.completed) return 'already_completed';
       session.completed = true;
       session.completedAt = Date.now();
       console.log(`[HANDOFF] ${phone}: ${input.reason}`);
@@ -172,6 +173,7 @@ async function executeTool(name, input, phone, contactInfo) {
     }
 
     case 'complete_task':
+      if (session.completed) return 'already_completed';
       session.completed = true;
       session.completedAt = Date.now();
       await archiveToChatwoot(phone, session, 'Conversación completada');
