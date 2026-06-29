@@ -28,4 +28,10 @@ export async function sendButtons(to, bodyText, buttons) {
   return whatsapp.messages.sendInteractiveButtons({ phoneNumberId: PHONE_NUMBER_ID, to, bodyText, buttons });
 }
 
+export async function downloadMedia(mediaId) {
+  const url = await whatsapp.media.getUrl(mediaId);
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${process.env.KAPSO_API_KEY}` } });
+  return Buffer.from(await res.arrayBuffer());
+}
+
 // ponytail: minimal bootstrap — add webhook handler, templates, flows as needed
