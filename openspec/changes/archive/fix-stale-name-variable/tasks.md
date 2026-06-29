@@ -8,8 +8,8 @@
 ## Implementación
 
 ### src/system-prompt.js
-- [ ] Agregar regla: si prospecto dice su nombre en cualquier momento → save_variable("nombre", nuevo_valor)
-- [ ] Agregar regla: si nombre nuevo difiere del guardado → confirmar antes de actualizar
+- [x] Agregar regla: si prospecto dice su nombre en cualquier momento → save_variable("nombre", nuevo_valor)
+- [x] Agregar regla: si nombre nuevo difiere del guardado → confirmar antes de actualizar
 
 ## QA
 - [ ] Bot guarda "Yaga" → prospecto dice "me llamo Jack" → bot confirma y actualiza
