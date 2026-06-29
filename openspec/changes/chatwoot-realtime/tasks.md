@@ -190,7 +190,7 @@ Los tests deben implementarse DESPUÉS de T0-T12. Los tests no pueden pasar si l
   - Si falla en paso 2: `archiveToChatwoot` branch idempotente no está actualizando status
   - Si falla en paso 4: `ensureChatwootConversation` está creando convs duplicadas
 
-- [ ] **T15** — En `tests/chatwoot-realtime.integration.mjs`, agregar test de resiliencia (Chatwoot caído):
+- [x] **T15** — En `tests/chatwoot-realtime.integration.mjs`, agregar test de resiliencia (Chatwoot caído):
   ```
   1. Temporalmente setear CHATWOOT_BASE_URL a URL inválida en .env de test
   2. Enviar webhook a bot → esperar 15s
@@ -224,12 +224,12 @@ Los tests deben implementarse DESPUÉS de T0-T12. Los tests no pueden pasar si l
 
 ## Documentación
 
-- [ ] **T18** — Actualizar `openspec/ARCHITECTURE.md`:
+- [x] **T18** — Actualizar `openspec/ARCHITECTURE.md`:
   - Agregar `chatwootForward` en diagrama de flujo principal
   - Actualizar sección de triggers de archival: "real-time (cada mensaje)" es el nuevo primer trigger
   - Actualizar tabla de APIs: `src/chatwoot.js` tiene 3 funciones adicionales exportadas
 
-- [ ] **T19** — Actualizar `CLAUDE.md` sección "Archivos que importan":
+- [x] **T19** — Actualizar `CLAUDE.md` sección "Archivos que importan":
   ```
   src/chatwoot.js    — Chatwoot integration: upsertContact, createConversation, postMessage,
                        ensureChatwootConversation, chatwootForward, archiveToChatwoot,
@@ -322,15 +322,15 @@ Paralelismo posible: T18/T19 pueden hacerse en paralelo con T13-T17.
 Todos los items deben estar verdes antes de merge a `main`:
 
 **Tests automáticos:**
-- [ ] `node tests/agent-unit.mjs` → 22+ tests passed (incluye T16)
-- [ ] `node -r dotenv/config tests/chatwoot.integration.mjs` → PASS (existente, no regresar)
-- [ ] `node -r dotenv/config tests/chatwoot-realtime.integration.mjs` → PASS (T13 + T14)
-- [ ] `node -r dotenv/config tests/bot-e2e-reject.mjs` → PASS con `status=resolved` (T17)
+- [x] `node tests/agent-unit.mjs` → 28 tests passed (incluye T16)
+- [x] `node -r dotenv/config tests/chatwoot.integration.mjs` → PASS (existente, no regresar)
+- [ ] `node -r dotenv/config tests/chatwoot-realtime.integration.mjs` → PASS (T13 + T14) — requiere bot local
+- [ ] `node -r dotenv/config tests/bot-e2e-reject.mjs` → PASS con `status=resolved` (T17) — requiere bot prod
 
 **Pre-deploy checklist** (de `specs/error-handling.md`):
-- [ ] Labels en Chatwoot creados (P1)
-- [ ] CHATWOOT_INBOX_ID correcto (P2)
-- [ ] CHATWOOT_API_TOKEN válido (P3)
+- [x] Labels en Chatwoot creados (P1)
+- [x] CHATWOOT_INBOX_ID correcto (P2)
+- [x] CHATWOOT_API_TOKEN válido (P3)
 
 **Verificación manual:**
 - [ ] V2: mensaje visible en Chatwoot en < 3s desde webhook

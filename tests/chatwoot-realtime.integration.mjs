@@ -147,6 +147,32 @@ async function run() {
 
   console.log('\nT14: PASS ✓');
 
+  // ── T15: resilience — chatwootForward non-fatal when Chatwoot is down ────
+  // This test requires the bot running locally with an invalid CHATWOOT_BASE_URL.
+  // Run manually:
+  //   CHATWOOT_BASE_URL=https://invalid.example.com node -r dotenv/config server.js &
+  //   BOT_URL=http://localhost:3000/webhook node -r dotenv/config tests/chatwoot-realtime.integration.mjs --resilience
+  //
+  // Expected: bot replies on WA, Railway logs show chatwoot_forward_error, no crash.
+  if (process.argv.includes('--resilience')) {
+    console.log('\nT15: resilience (Chatwoot down)\n');
+    console.log('  Sending msg with Chatwoot unreachable...');
+    // Capture stdout to verify log output — bot must log chatwoot_forward_error
+    // and still return 200 on webhook
+    const resilienceRes = await fetch(BOT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-webhook-event': 'whatsapp.message.received' },
+      body: JSON.stringify({
+        message: { type: 'text', text: { body: 'test resilience' }, id: `resilience-${Date.now()}` },
+        conversation: { phone_number: TEST_PHONE, kapso: { contact_name: 'Resilience Test' } },
+      }),
+    });
+    assert.equal(resilienceRes.status, 200, 'webhook must return 200 even when Chatwoot is down');
+    console.log('  webhook returned 200 ✓');
+    console.log('  Check server logs for: chatwoot_forward_error (type) — no uncaughtException');
+    console.log('\nT15: PASS (manual verification of logs required)');
+  }
+
   // ── Summary ──────────────────────────────────────────────────────────────
   console.log(`\nPASS — real-time forwarding OK`);
   console.log(`Verify: ${BASE()}/app/accounts/${ACCOUNT()}/conversations/${conv1.id}`);
