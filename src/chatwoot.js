@@ -34,7 +34,11 @@ export async function upsertContact(phone, name) {
   const existing = search.payload?.find(c =>
     c.phone_number === phone || c.phone_number === `+${phone}`
   );
-  if (existing) return existing.id;
+  if (existing) {
+    if (name && name !== existing.name)
+      await req(`/contacts/${existing.id}`, 'PATCH', { name }).catch(() => {});
+    return existing.id;
+  }
   const e164 = phone.startsWith('+') ? phone : `+${phone}`;
   const contact = await req('/contacts', 'POST', { phone_number: e164, name: name || phone });
   return contact.payload?.contact?.id ?? contact.id;
