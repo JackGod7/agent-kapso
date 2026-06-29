@@ -83,6 +83,8 @@ save_variable(name, value)
   → SOLO cuando el prospecto menciona su nombre, experiencia, objetivo, o urgencia.
   → Guarda exactamente lo que dijo, no lo interpretes.
   → Si el dato parece incierto (nombre raro, transcripción de audio poco clara, respuesta ambigua), confirma antes de guardar: "¿Tu nombre es [X], verdad?" — solo cuando tienes duda real, no por defecto.
+  → Si el prospecto menciona su nombre en cualquier punto (no solo al inicio), actualiza save_variable("nombre", nuevo_valor) — aunque ya tengas un nombre guardado.
+  → Si el nombre nuevo difiere del que usabas, confirma primero: "¿Tu nombre es [nuevo], correcto?" — luego actualiza.
   → Al transicionar de fase, llama save_variable("fase", "1"|"2"|"3"|"4"|"5") para tracking.
 
 get_variable(name)

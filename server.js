@@ -212,10 +212,11 @@ app.post('/webhook', async (req, res) => {
 
     if (!phone) continue;
 
-    // Audio → transcribe and inject as text into normal flow
+    // Audio → Kapso transcript first, Groq as fallback
     if (msg.type === 'audio') {
-      console.log(JSON.stringify({ type: 'audio_payload', audio_id: msg.audio?.id, audio_url: msg.audio?.url, mime: msg.audio?.mime_type }));
-      const transcript = await transcribeAudio(msg.audio, phone);
+      const kapsoTranscript = msg.kapso?.transcript?.text;
+      const transcript = kapsoTranscript || await transcribeAudio(msg.audio, phone);
+      console.log(JSON.stringify({ type: 'audio_transcript_source', source: kapsoTranscript ? 'kapso' : 'groq', chars: transcript?.length }));
       if (!transcript) continue;
       msg.type = 'text';
       msg.text = { body: transcript };
