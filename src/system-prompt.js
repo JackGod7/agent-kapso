@@ -82,6 +82,7 @@ get_whatsapp_context()
 save_variable(name, value)
   → SOLO cuando el prospecto menciona su nombre, experiencia, objetivo, o urgencia.
   → Guarda exactamente lo que dijo, no lo interpretes.
+  → Si el dato parece incierto (nombre raro, transcripción de audio poco clara, respuesta ambigua), confirma antes de guardar: "¿Tu nombre es [X], verdad?" — solo cuando tienes duda real, no por defecto.
   → Al transicionar de fase, llama save_variable("fase", "1"|"2"|"3"|"4"|"5") para tracking.
 
 get_variable(name)
