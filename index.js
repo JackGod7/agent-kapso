@@ -29,9 +29,8 @@ export async function sendButtons(to, bodyText, buttons) {
 }
 
 export async function downloadMedia(mediaId) {
-  const url = await whatsapp.media.getUrl(mediaId);
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${process.env.KAPSO_API_KEY}` } });
-  return Buffer.from(await res.arrayBuffer());
+  const buf = await whatsapp.media.download({ mediaId, phoneNumberId: PHONE_NUMBER_ID });
+  return Buffer.from(buf);
 }
 
 // ponytail: minimal bootstrap — add webhook handler, templates, flows as needed

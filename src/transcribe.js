@@ -8,6 +8,7 @@ export async function transcribeAudio(audio, phone) {
     const buf = audio.url
       ? Buffer.from(await (await fetch(audio.url)).arrayBuffer())
       : await downloadMedia(audio.id);
+    console.log(JSON.stringify({ type: 'audio_download', bytes: buf.length, mime: audio.mime_type }));
     const file = new File([buf], 'audio.ogg', { type: audio.mime_type || 'audio/ogg' });
     const result = await groq.audio.transcriptions.create({
       file,
