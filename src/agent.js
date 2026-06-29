@@ -156,7 +156,7 @@ async function executeTool(name, input, phone, contactInfo) {
     }
 
     case 'send_material': {
-      const BASE = 'https://agent-kapso-production-36e0.up.railway.app';
+      const BASE = process.env.BOT_PUBLIC_URL || 'https://agent-kapso-production-36e0.up.railway.app';
       const MATERIALS = {
         temario: { type: 'doc', url: `${BASE}/temario`, filename: 'Temario GH-600.pdf', caption: 'Temario oficial — Agentic AI Developer GH-600' },
         testimonios: { type: 'img', url: `${BASE}/testimonios`, caption: 'Resultado real de un alumno — Gobierno de IA para Atlantic City 🚀' },
