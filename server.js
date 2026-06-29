@@ -214,6 +214,12 @@ app.post('/webhook', async (req, res) => {
 
     // Audio → Kapso transcript first, Groq as fallback
     if (msg.type === 'audio') {
+      const audioBytes = msg.kapso?.media_data?.byte_size || 0;
+      if (audioBytes > 2_000_000) {
+        await sendText(phone, 'Tu audio es muy largo 😅 Escríbeme el mensaje o manda una nota más corta y te respondo al toque.').catch(() => {});
+        console.log(JSON.stringify({ type: 'audio_too_long', bytes: audioBytes, phone_suffix: phone.slice(-4) }));
+        continue;
+      }
       const kapsoTranscript = msg.kapso?.transcript?.text;
       const transcript = kapsoTranscript || await transcribeAudio(msg.audio, phone);
       console.log(JSON.stringify({ type: 'audio_transcript_source', source: kapsoTranscript ? 'kapso' : 'groq', chars: transcript?.length }));
