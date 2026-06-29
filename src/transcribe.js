@@ -13,8 +13,9 @@ export async function transcribeAudio(audio, phone) {
       model: 'whisper-large-v3',
       language: 'es',
     });
-    console.log(JSON.stringify({ type: 'audio_transcribed', phone_suffix: phone.slice(-4), chars: result.text.length }));
-    return result.text;
+    const text = result.text ?? '';
+    console.log(JSON.stringify({ type: 'audio_transcribed', phone_suffix: phone.slice(-4), chars: text.length }));
+    return text || null;
   } catch (err) {
     console.error(`[transcribe] ${phone}:`, err.message);
     return null;
