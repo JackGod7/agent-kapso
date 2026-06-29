@@ -11,6 +11,9 @@ index.js           — WhatsApp client (sendText via @kapso/whatsapp-cloud-api)
 src/agent.js       — Claude agent loop, executeTool(), tool handling
 src/state.js       — Session store (in-memory, migrar a Redis)
 src/system-prompt.js — SYSTEM_PROMPT y TOOLS exportados a agent.js
+src/chatwoot.js    — Chatwoot integration: upsertContact, createConversation, postMessage,
+                     chatwootForward (real-time forward), archiveToChatwoot (idempotent),
+                     ensureChatwootConversation + updateConversationStatus (internas)
 ```
 
 ## Archivos que NO corren en producción

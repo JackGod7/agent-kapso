@@ -23,11 +23,12 @@
 server.js              — Express HTTP server, webhook entrypoint
 index.js               — WhatsApp client: sendText/Doc/Image/Buttons, downloadMedia, saveContactNote
 src/
-  agent.js             — Claude agent loop, executeTool(), archiveToChatwoot()
+  agent.js             — Claude agent loop, executeTool()
   state.js             — getSession/saveSession/resetSession (Redis + in-memory)
   system-prompt.js     — SYSTEM_PROMPT + TOOLS definitions
   transcribe.js        — Groq fallback audio transcription
-  chatwoot.js          — upsertContact, createConversation, postMessage
+  chatwoot.js          — upsertContact, createConversation, postMessage,
+                         chatwootForward, ensureChatwootConversation, archiveToChatwoot
 ```
 
 ---
@@ -47,6 +48,8 @@ processMessages(phone, messages[], contactInfo)
   ↓ check session.humanMode → skip si activo
   ↓ check session.completed → skip (o reset si >24h)
   ↓ sendTyping(phone, messageId)
+  ↓ chatwootForward(incoming) — mensaje del usuario visible en Chatwoot en tiempo real
+  ↓ saveSession — persiste chatwootConversationId a Redis
   ↓
 runAgent(phone, text, contactInfo)
   ↓ session.history.push(user_msg)
@@ -55,6 +58,8 @@ runAgent(phone, text, contactInfo)
     ↓ executeTool() por cada tool_use
     ↓ until end_turn
   ↓ reply = último text block
+  ↓
+chatwootForward(outgoing) — respuesta del bot visible en Chatwoot antes de enviar WA
   ↓
 sendText(phone, reply)
 ```
@@ -114,20 +119,26 @@ sendText(phone, reply)
   humanMode: false,     // true → Chatwoot tomó control, bot silenciado
   totalTokens: 0,       // acumulado de tokens (alerta si >50k)
   source: 'organic',    // atribución: tiktok, facebook_ad, instagram_ad, meta_referral
-  lastReply: null,      // dedup de respuestas idénticas consecutivas
+  lastReply: null,               // dedup de respuestas idénticas consecutivas
+  chatwootConversationId: null,  // ID conv en Chatwoot (persiste entre mensajes del mismo lead)
 }
 ```
 
 ---
 
-## Archival de conversaciones (implementado 2026-06-29)
+## Forwarding a Chatwoot en tiempo real (implementado 2026-06-29)
 
-`archiveToChatwoot(phone, session, label)` se llama en 3 casos:
-1. `handoff_to_human` — prospecto listo para Jack
-2. `complete_task` — rechazo definitivo
-3. Reset por 24h — sesión expirada, nueva conversación
+Cada mensaje (entrante y saliente) se postea a Chatwoot en tiempo real via `chatwootForward`.
+La conversación es visible desde el primer "hola" — no solo al cierre.
 
-Chatwoot recibe: contacto (E.164), conversación, todos los mensajes del historial.
+Triggers de Chatwoot:
+1. Cada mensaje incoming → `chatwootForward(incoming)` en processMessages
+2. Cada reply del bot → `chatwootForward(outgoing)` en processMessages
+3. `handoff_to_human` → `archiveToChatwoot` actualiza status=open + label=handoff
+4. `complete_task` → `archiveToChatwoot` actualiza status=resolved
+5. Reset 24h → `archiveToChatwoot` con fallback (replay history si no hay convId)
+
+`session.chatwootConversationId` persiste en Redis para reusar la misma conv en mensajes subsiguientes.
 
 ---
 
@@ -136,6 +147,7 @@ Chatwoot recibe: contacto (E.164), conversación, todos los mensajes del histori
 | Feature | Prioridad | Estado |
 |---|---|---|
 | `conversation-archival` | Alta | ✅ implementado |
+| `chatwoot-realtime` | Alta | ✅ implementado — forwarding en tiempo real |
 | `save_contact_note` fix (endpoint Kapso) | Media | ⏳ pendiente — confirmar endpoint real |
 | `/stats /dashboard` auth básica | Media | ⏳ pendiente |
 | Broadcasts | Alta | 🔴 bloqueado — Meta business verification |
