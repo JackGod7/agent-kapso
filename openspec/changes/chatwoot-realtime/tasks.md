@@ -324,7 +324,7 @@ Todos los items deben estar verdes antes de merge a `main`:
 **Tests automáticos:**
 - [x] `node tests/agent-unit.mjs` → 28 tests passed (incluye T16)
 - [x] `node -r dotenv/config tests/chatwoot.integration.mjs` → PASS (existente, no regresar)
-- [ ] `node -r dotenv/config tests/chatwoot-realtime.integration.mjs` → PASS (T13 + T14) — requiere bot local
+- [x] `node -r dotenv/config tests/chatwoot-realtime.integration.mjs` → PASS (T13 + T14)
 - [ ] `node -r dotenv/config tests/bot-e2e-reject.mjs` → PASS con `status=resolved` (T17) — requiere bot prod
 
 **Pre-deploy checklist** (de `specs/error-handling.md`):

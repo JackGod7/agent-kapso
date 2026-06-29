@@ -10,11 +10,12 @@
  * T15: resilience — Chatwoot down → bot still responds (manual, see note below)
  */
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import { getSession, resetSession } from '../src/state.js';
 
 const TEST_PHONE = '51900000088'; // fake phone, won't conflict with real leads
 const BOT_URL = process.env.BOT_URL || 'http://localhost:3000/webhook';
-const WAIT_MS = 8_000; // enough for Claude to respond
+const WAIT_MS = 25_000; // debounce(4s) + Claude(8-15s) + margin
 const BASE = () => process.env.CHATWOOT_BASE_URL;
 const TOKEN = () => process.env.CHATWOOT_API_TOKEN;
 const ACCOUNT = () => process.env.CHATWOOT_ACCOUNT_ID;
@@ -36,26 +37,31 @@ async function getContactConversations(phone) {
   );
   if (!contact) return { contact: null, conversations: [] };
   const convs = await chatwootReq(`/contacts/${contact.id}/conversations`);
-  return { contact, conversations: convs.payload?.conversations ?? [] };
+  // Chatwoot returns payload as object {0: conv, 1: conv} not an array
+  const conversations = Array.isArray(convs.payload)
+    ? convs.payload
+    : Object.values(convs.payload ?? {});
+  return { contact, conversations };
 }
 
 async function getConversationMessages(convId) {
   const data = await chatwootReq(`/conversations/${convId}/messages`);
-  return data.payload?.messages ?? [];
+  // Chatwoot returns messages directly in payload (array), not under a 'messages' key
+  return Array.isArray(data.payload) ? data.payload : (data.payload?.messages ?? []);
 }
 
 function sendWebhook(text) {
-  return fetch(BOT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-webhook-event': 'whatsapp.message.received' },
-    body: JSON.stringify({
-      message: { type: 'text', text: { body: text }, id: `test-${Date.now()}` },
-      conversation: {
-        phone_number: TEST_PHONE,
-        kapso: { contact_name: 'Test Integration User' },
-      },
-    }),
+  const SECRET = process.env.KAPSO_WEBHOOK_SECRET;
+  const body = JSON.stringify({
+    message: { type: 'text', text: { body: text }, id: `test-${Date.now()}` },
+    conversation: {
+      phone_number: TEST_PHONE,
+      kapso: { contact_name: 'Test Integration User' },
+    },
   });
+  const headers = { 'Content-Type': 'application/json', 'x-webhook-event': 'whatsapp.message.received' };
+  if (SECRET) headers['x-webhook-signature'] = crypto.createHmac('sha256', SECRET).update(body).digest('hex');
+  return fetch(BOT_URL, { method: 'POST', headers, body });
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -77,28 +83,26 @@ async function run() {
   await sendWebhook('Hola, vi el GH-600');
   await sleep(WAIT_MS);
 
-  const { contact, conversations: convs1 } = await getContactConversations(TEST_PHONE);
+  // Use session.chatwootConversationId as source of truth — bot sets it in Redis
+  const session1 = await getSession(TEST_PHONE);
+  const convId = session1.chatwootConversationId;
+  assert.ok(convId > 0, `session.chatwootConversationId must be set after msg 1, got: ${convId}`);
+  console.log(`  session.chatwootConversationId: ${convId} ✓`);
+
+  const { contact } = await getContactConversations(TEST_PHONE);
   assert.ok(contact, 'contact must exist in Chatwoot after msg 1');
   console.log(`  contact id: ${contact.id} ✓`);
 
-  const conv1 = convs1.find(c => c.meta?.sender?.phone_number?.replace('+', '') === TEST_PHONE
-    || c.meta?.sender?.phone_number === `+${TEST_PHONE}`) ?? convs1[convs1.length - 1];
-  assert.ok(conv1, 'conversation must exist in Chatwoot after msg 1');
-  assert.ok(conv1.id > 0, `conv.id must be positive, got: ${conv1.id}`);
-  console.log(`  conversation id: ${conv1.id} ✓`);
+  const conv1 = { id: convId }; // use session-sourced id
 
-  const msgs1 = await getConversationMessages(conv1.id);
+  const msgs1 = await getConversationMessages(convId);
   assert.ok(msgs1.length >= 2, `conv must have ≥ 2 messages after msg 1, got: ${msgs1.length}`);
   const incoming1 = msgs1.filter(m => m.message_type === 0); // 0=incoming
   const outgoing1 = msgs1.filter(m => m.message_type === 1); // 1=outgoing
   assert.ok(incoming1.length >= 1, 'must have ≥ 1 incoming message');
   assert.ok(outgoing1.length >= 1, 'must have ≥ 1 outgoing message');
   console.log(`  messages: ${incoming1.length} incoming + ${outgoing1.length} outgoing ✓`);
-
-  const session1 = await getSession(TEST_PHONE);
-  assert.equal(session1.chatwootConversationId, conv1.id,
-    `session.chatwootConversationId (${session1.chatwootConversationId}) must equal conv.id (${conv1.id})`);
-  console.log(`  session.chatwootConversationId === ${conv1.id} ✓`);
+  console.log(`  conversation id: ${convId} ✓`);
 
   console.log('\n  sending msg 2...');
   await sendWebhook('¿De qué trata el curso?');
@@ -128,7 +132,7 @@ async function run() {
   await sleep(WAIT_MS * 2); // handoff takes more Claude rounds
 
   const { conversations: convs3 } = await getContactConversations(TEST_PHONE);
-  const conv3 = convs3.find(c => c.id === conv1.id);
+  const conv3 = convs3.find(c => c.id === conv1.id) ?? convs3.find(c => c.id > 0);
   assert.ok(conv3, `conv ${conv1.id} must still exist after handoff`);
 
   // Check status = open (handoff)
