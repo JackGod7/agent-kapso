@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 
-// ponytail: endpoint may need adjustment — /platform/v1/ vs /meta/whatsapp/ unconfirmed
 const BASE = 'https://api.kapso.ai/platform/v1';
 const PHONE_NUMBER_ID = process.env.KAPSO_PHONE_NUMBER_ID;
 const API_KEY = process.env.KAPSO_API_KEY;
@@ -24,67 +23,88 @@ async function kapso(method, path, body) {
 }
 
 function parsePhones(phonesArg) {
-  // CSV file path or comma-separated list
-  if (phonesArg.endsWith('.csv') || phonesArg.endsWith('.txt')) {
-    return readFileSync(phonesArg, 'utf8')
-      .split(/[\n,]/)
-      .map(p => p.trim().replace(/\D/g, ''))
-      .filter(p => p.length >= 10);
-  }
-  return phonesArg.split(',').map(p => p.trim().replace(/\D/g, '')).filter(p => p.length >= 10);
+  // CSV file path or comma-separated list → E.164 with +
+  const raw = phonesArg.endsWith('.csv') || phonesArg.endsWith('.txt')
+    ? readFileSync(phonesArg, 'utf8').split(/[\n,]/)
+    : phonesArg.split(',');
+  return raw
+    .map(p => p.trim().replace(/[^\d+]/g, ''))
+    .filter(p => p.replace(/\D/g, '').length >= 10)
+    .map(p => p.startsWith('+') ? p : `+${p}`);
 }
 
 const { values } = parseArgs({
   options: {
-    message:  { type: 'string' },
+    template: { type: 'string' },   // Meta template ID (required to create)
+    name:     { type: 'string' },   // broadcast name/label
     phones:   { type: 'string' },
-    schedule: { type: 'string' },  // ISO datetime, e.g. 2026-07-01T10:00:00Z
-    status:   { type: 'string' },  // broadcast id — skip create, just check status
+    schedule: { type: 'string' },   // ISO datetime, e.g. 2026-07-01T10:00:00Z
+    status:   { type: 'string' },   // broadcast id — skip create, just check status
+    list:     { type: 'boolean' },  // list available templates
   },
 });
 
+// List templates mode
+if (values.list) {
+  const res = await kapso('GET', `/whatsapp/templates?phone_number_id=${PHONE_NUMBER_ID}`);
+  const templates = res.data ?? res;
+  console.log('Available templates:');
+  for (const t of templates) {
+    console.log(`  ${t.id} — ${t.name} (${t.status})`);
+  }
+  process.exit(0);
+}
+
+// Status check mode
 if (values.status) {
-  // Status check mode
-  const recipients = await kapso('GET', `/whatsapp_broadcasts/${values.status}/recipients`);
-  const data = recipients.data ?? recipients;
-  const total = data.length;
-  const delivered = data.filter(r => r.status === 'delivered').length;
-  const failed = data.filter(r => r.status === 'failed').length;
+  const res = await kapso('GET', `/whatsapp/broadcasts/${values.status}/recipients`);
+  const data = res.data ?? res;
+  const total = Array.isArray(data) ? data.length : (res.total ?? '?');
+  const delivered = Array.isArray(data) ? data.filter(r => r.status === 'delivered').length : (res.delivered ?? '?');
+  const failed = Array.isArray(data) ? data.filter(r => r.status === 'failed').length : (res.failed ?? '?');
   console.log(`Broadcast ${values.status}: ${total} total, ${delivered} delivered, ${failed} failed`);
   process.exit(0);
 }
 
-if (!values.message || !values.phones) {
-  console.error('Usage: node scripts/broadcast.js --message "texto" --phones phones.csv [--schedule 2026-07-01T10:00:00Z]');
-  console.error('       node scripts/broadcast.js --status <broadcast_id>');
+if (!values.template || !values.phones) {
+  console.error('Usage:');
+  console.error('  node -r dotenv/config scripts/broadcast.js --template <meta_template_id> --phones phones.csv [--name "label"] [--schedule 2026-07-01T10:00:00Z]');
+  console.error('  node -r dotenv/config scripts/broadcast.js --status <broadcast_id>');
+  console.error('  node -r dotenv/config scripts/broadcast.js --list   # show available templates');
   process.exit(1);
 }
 
 const phones = parsePhones(values.phones);
-console.log(`Phones loaded: ${phones.length}`);
+const name = values.name ?? `broadcast-${Date.now()}`;
+console.log(`Phones: ${phones.length} | Template: ${values.template} | Name: ${name}`);
 
 // 1. Create broadcast
-const broadcast = await kapso('POST', '/whatsapp_broadcasts', {
-  phone_number_id: PHONE_NUMBER_ID,
-  message: { text: { body: values.message } },
-  ...(values.schedule ? { scheduled_at: values.schedule } : {}),
+const created = await kapso('POST', '/whatsapp/broadcasts', {
+  whatsapp_broadcast: {
+    name,
+    phone_number_id: PHONE_NUMBER_ID,
+    whatsapp_template_id: values.template,
+    ...(values.schedule ? { scheduled_at: values.schedule } : {}),
+  },
 });
-const id = broadcast.id ?? broadcast.data?.id;
+const id = created.id ?? created.data?.id ?? created.whatsapp_broadcast?.id;
 console.log(`Broadcast created: ${id}`);
 
 // 2. Add recipients in batches of 1000
 const BATCH = 1000;
 for (let i = 0; i < phones.length; i += BATCH) {
   const batch = phones.slice(i, i + BATCH);
-  await kapso('POST', `/whatsapp_broadcasts/${id}/recipients`, {
-    recipients: batch.map(phone => ({ phone_number: phone })),
+  await kapso('POST', `/whatsapp/broadcasts/${id}/recipients`, {
+    whatsapp_broadcast: {
+      recipients: batch.map(phone => ({ phone_number: phone })),
+    },
   });
   console.log(`Recipients added: ${Math.min(i + BATCH, phones.length)}/${phones.length}`);
 }
 
 // 3. Send
-await kapso('POST', `/whatsapp_broadcasts/${id}/send`, {});
+await kapso('POST', `/whatsapp/broadcasts/${id}/send`, {});
 console.log(values.schedule
-  ? `Broadcast scheduled for ${values.schedule}`
-  : `Broadcast sent. Check status: node -r dotenv/config scripts/broadcast.js --status ${id}`
+  ? `Scheduled for ${values.schedule}`
+  : `Sent. Check: node -r dotenv/config scripts/broadcast.js --status ${id}`
 );
