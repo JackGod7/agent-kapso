@@ -8,10 +8,10 @@
 ## Implementación
 
 ### server.js
-- [ ] Leer `msg.kapso?.transcript?.text` antes de llamar transcribeAudio
-- [ ] Si existe → usarlo directo, skip Groq
-- [ ] Si no → llamar transcribeAudio como fallback
-- [ ] Log `audio_transcript_source` con campo `source: "kapso"|"groq"`
+- [x] Leer `msg.kapso?.transcript?.text` antes de llamar transcribeAudio
+- [x] Si existe → usarlo directo, skip Groq
+- [x] Si no → llamar transcribeAudio como fallback
+- [x] Log `audio_transcript_source` con campo `source: "kapso"|"groq"`
 
 ## QA
 - [ ] Enviar nota de voz → log muestra `source: "kapso"` → bot responde
