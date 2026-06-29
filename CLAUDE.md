@@ -17,6 +17,7 @@ src/system-prompt.js — SYSTEM_PROMPT y TOOLS exportados a agent.js
 
 ```
 .agents/skills/    — Scripts de CLI para observar/operar Kapso API (ops/debug only)
+scripts/           — Scripts de ops locales (broadcast, etc.)
 openspec/          — Specs de features/bugs (documentación)
 ```
 
@@ -61,6 +62,23 @@ WhatsApp msg → Kapso → POST /webhook → server.js
 
 Ver `openspec/ARCHITECTURE.md` para backlog completo.
 Ver `openspec/changes/*/tasks.md` para tareas pendientes por feature.
+
+## Broadcast (retargeting leads)
+
+```bash
+# Enviar mensaje a lista de leads
+node -r dotenv/config scripts/broadcast.js --message "Hola, última semana para el GH-600..." --phones phones.csv
+
+# Programado (ISO datetime)
+node -r dotenv/config scripts/broadcast.js --message "..." --phones phones.csv --schedule 2026-07-01T10:00:00Z
+
+# Ver estado de entrega
+node -r dotenv/config scripts/broadcast.js --status <broadcast_id>
+```
+
+`phones.csv` — un número por línea, E.164 (ej: 51999123456). Duplicados → Kapso los deduplica.
+
+⚠️  Endpoint `/platform/v1/whatsapp_broadcasts` — confirmar en primer uso, puede variar.
 
 ## Observar conversaciones en producción
 
