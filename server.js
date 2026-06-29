@@ -229,8 +229,7 @@ app.post('/webhook', async (req, res) => {
         continue;
       }
       console.log(JSON.stringify({ type: 'audio_transcript_source', source: kapsoTranscript !== null ? 'kapso' : 'groq', chars: transcript.length }));
-      msg.type = 'text';
-      msg.text = { body: transcript };
+      msg = { ...msg, type: 'text', text: { body: transcript } };
     }
 
     const text = msg.type === 'interactive'

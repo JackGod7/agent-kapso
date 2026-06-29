@@ -7,7 +7,7 @@ export async function transcribeAudio(audio, phone) {
   try {
     const buf = await downloadMedia(audio.id);
     console.log(JSON.stringify({ type: 'audio_download', bytes: buf.length, mime: audio.mime_type }));
-    const file = new File([buf], 'audio.ogg', { type: audio.mime_type || 'audio/ogg' });
+    const file = new (globalThis.File ?? (await import('node:buffer')).File)([buf], 'audio.ogg', { type: audio.mime_type || 'audio/ogg' });
     const result = await groq.audio.transcriptions.create({
       file,
       model: 'whisper-large-v3',

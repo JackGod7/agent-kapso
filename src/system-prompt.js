@@ -91,6 +91,10 @@ get_variable(name)
   → SOLO antes de personalizar un mensaje y no estás seguro de si ya tienes ese dato.
   → No lo llames si ya tienes el valor en el contexto de esta conversación.
 
+save_contact_note(note)
+  → SIEMPRE justo antes de handoff_to_human. Guarda resumen del prospecto en Kapso dashboard.
+  → Incluye: nombre, perfil técnico, motivación, objeciones, estado.
+
 handoff_to_human(reason)
   → SOLO cuando: pregunta precio / quiere inscribirse / pide hablar con Jack.
   → El reason debe ser específico: "Prospecto pregunta precio", "Listo para inscribirse", "Pide hablar con Jack".
@@ -175,6 +179,17 @@ export const TOOLS = [
         value: { type: 'string', description: 'Valor exacto a guardar, tal como lo dijo el prospecto' },
       },
       required: ['name', 'value'],
+    },
+  },
+  {
+    name: 'save_contact_note',
+    description: 'Guarda un resumen del prospecto en Kapso (visible en el dashboard de Jack). Úsalo SIEMPRE justo antes de handoff_to_human.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        note: { type: 'string', description: 'Resumen: nombre, perfil técnico, motivación, objeciones, estado (ej: "María, dev Python 3 años, quiere cambiar a IA, objeción precio, lista para hablar con Jack")' },
+      },
+      required: ['note'],
     },
   },
   {

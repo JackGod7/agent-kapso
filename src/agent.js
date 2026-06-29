@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { SYSTEM_PROMPT, TOOLS } from './system-prompt.js';
 import { getSession, saveSession } from './state.js';
 import { upsertContact, createConversation, postMessage } from './chatwoot.js';
-import { sendText, sendDocument, sendImage, sendButtons } from '../index.js';
+import { sendText, sendDocument, sendImage, sendButtons, saveContactNote } from '../index.js';
 
 const anthropic = new Anthropic();
 const HISTORY_WINDOW = 20;
@@ -110,6 +110,10 @@ async function executeTool(name, input, phone, contactInfo) {
     case 'save_variable':
       session.variables[input.name] = input.value;
       return 'ok';
+
+    case 'save_contact_note':
+      await saveContactNote(phone, input.note);
+      return 'note_saved';
 
     case 'handoff_to_human': {
       session.completed = true;
