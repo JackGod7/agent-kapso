@@ -85,6 +85,20 @@ Las tareas siguen el orden de dependencias del diagrama en `design.md`. **No imp
   - Código exacto en `design.md` → "T5"
   - Specs validadas: Escenarios 5, 6, 7, 8, 10
 
+- [ ] **T5b** — En `executeTool` (`agent.js`), forward `ask_with_buttons` body a Chatwoot como outgoing:
+  ```js
+  case 'ask_with_buttons': {
+    const { body, buttons } = input;
+    await sendButtons(phone, body, buttons);
+    // forward button body to Chatwoot so Jack sees what the bot asked
+    await chatwootForward(phone, session, body, 'outgoing', contactInfo).catch(() => {});
+    return 'buttons_sent';
+  }
+  ```
+  - Requiere importar `chatwootForward` en `agent.js` (además de `archiveToChatwoot`)
+  - Esto permite ver en Chatwoot las preguntas de FASE 1 + botones de objeciones
+  - Specs validadas: `specs/real-time-forwarding.md` Escenario 4 (reply null — ahora el body sí llega)
+
 ### `src/agent.js`
 
 Estas tareas son cleanup — solo eliminación e imports. No hay nueva lógica.
