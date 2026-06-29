@@ -65,7 +65,7 @@ export async function runAgent(phone, userText, contactInfo) {
         .map(async b => ({
           type: 'tool_result',
           tool_use_id: b.id,
-          content: String(await executeTool(b.name, b.input, phone, contactInfo)),
+          content: String(await executeTool(b.name, b.input, phone, contactInfo).catch(err => `tool_error: ${err.message}`)),
         }))
     );
 
